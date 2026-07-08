@@ -1,0 +1,334 @@
+const state = {
+  tabId: null,
+  items: [],
+  query: ""
+};
+
+const elements = {
+  statusText: document.getElementById("statusText"),
+  refreshBtn: document.getElementById("refreshBtn"),
+  clearBtn: document.getElementById("clearBtn"),
+  searchInput: document.getElementById("searchInput"),
+  emptyState: document.getElementById("emptyState"),
+  mediaList: document.getElementById("mediaList")
+};
+
+function setStatus(message) {
+  elements.statusText.textContent = message;
+}
+
+function sendMessage(payload) {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(payload, (response) => {
+      const err = chrome.runtime.lastError;
+      if (err) {
+        const msg = (err.message || "").toLowerCase();
+        if (msg.includes("message port closed before a response was received")) {
+          resolve({ ok: true, ignored: true });
+          return;
+        }
+
+        resolve({ ok: false, error: err.message });
+        return;
+      }
+
+      resolve(response || null);
+    });
+  });
+}
+
+async function getActiveTabId() {
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  return tabs && tabs[0] ? tabs[0].id : null;
+}
+
+function formatBytes(bytes) {
+  if (!bytes || bytes <= 0) {
+    return "未知大小";
+  }
+
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let value = bytes;
+  let unit = 0;
+
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+
+  return `${value.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
+}
+
+function formatDuration(seconds) {
+  if (!seconds || seconds <= 0) {
+    return "时长未知";
+  }
+
+  const rounded = Math.round(seconds);
+  const h = Math.floor(rounded / 3600);
+  const m = Math.floor((rounded % 3600) / 60);
+  const s = rounded % 60;
+
+  if (h > 0) {
+    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  }
+
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function shortUrl(url) {
+  try {
+    const parsed = new URL(url);
+    const compactPath = parsed.pathname.length > 45 ? `${parsed.pathname.slice(0, 45)}...` : parsed.pathname;
+    return `${parsed.hostname}${compactPath}`;
+  } catch {
+    if (!url) {
+      return "";
+    }
+
+    return url.length > 70 ? `${url.slice(0, 70)}...` : url;
+  }
+}
+
+function extensionFromMime(mimeType) {
+  const map = {
+    "video/mp4": "mp4",
+    "video/webm": "webm",
+    "video/quicktime": "mov",
+    "application/vnd.apple.mpegurl": "m3u8",
+    "application/x-mpegurl": "m3u8",
+    "application/dash+xml": "mpd",
+    "audio/mpeg": "mp3",
+    "audio/mp4": "m4a"
+  };
+
+  return map[(mimeType || "").toLowerCase()] || "";
+}
+
+function extractExtensionFromUrl(url) {
+  const matched = (url || "").match(/\.([a-z0-9]{2,5})(?:[?#]|$)/i);
+  return matched ? matched[1].toLowerCase() : "";
+}
+
+function sanitizeName(name) {
+  return (name || "媒体")
+    .replace(/[\\/:*?"<>|]+/g, "_")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
+}
+
+function buildFileName(item) {
+  const base = sanitizeName(item.label || item.filenameHint || "媒体") || "媒体";
+  const mime = (item.mimeType || "").toLowerCase();
+  const url = item.url || "";
+  const looksAudio = mime.startsWith("audio/") || /\.(mp3|m4a|wav|ogg|flac|aac|webm)([?#]|$)/i.test(url);
+  const looksImage = mime.startsWith("image/") || /\.(jpg|jpeg|png|webp|gif|bmp|avif|svg)([?#]|$)/i.test(url);
+  const defaultExt = looksAudio ? "mp3" : looksImage ? "jpg" : "mp4";
+  const ext = extractExtensionFromUrl(url) || extensionFromMime(item.mimeType) || defaultExt;
+  return `${base}.${ext}`;
+}
+
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const helper = document.createElement("textarea");
+    helper.value = text;
+    document.body.appendChild(helper);
+    helper.select();
+
+    let copied = false;
+    try {
+      copied = document.execCommand("copy");
+    } finally {
+      helper.remove();
+    }
+
+    return copied;
+  }
+}
+
+async function downloadItem(item) {
+  const response = await sendMessage({
+    type: "DOWNLOAD_MEDIA",
+    url: item.url,
+    filename: buildFileName(item)
+  });
+
+  if (!response || !response.ok) {
+    setStatus(`下载失败：${response && response.error ? response.error : "未知错误"}`);
+    return;
+  }
+
+  setStatus("已加入浏览器下载任务");
+}
+
+function createBadge(text) {
+  const badge = document.createElement("span");
+  badge.className = "badge";
+  badge.textContent = text;
+  return badge;
+}
+
+function renderList() {
+  const q = state.query.trim().toLowerCase();
+  const filtered = state.items.filter((item) => {
+    if (!q) {
+      return true;
+    }
+
+    const haystack = `${item.label || ""} ${item.url || ""} ${item.mimeType || ""}`.toLowerCase();
+    return haystack.includes(q);
+  });
+
+  elements.mediaList.innerHTML = "";
+
+  if (!filtered.length) {
+    elements.emptyState.style.display = "block";
+    return;
+  }
+
+  elements.emptyState.style.display = "none";
+
+  for (const item of filtered) {
+    const li = document.createElement("li");
+    li.className = "media-item";
+
+    const title = document.createElement("h2");
+    title.className = "media-title";
+    title.textContent = item.label || item.filenameHint || shortUrl(item.url) || "未命名媒体";
+
+    const urlText = document.createElement("p");
+    urlText.className = "media-url";
+    urlText.textContent = shortUrl(item.url);
+
+    const badgeRow = document.createElement("div");
+    badgeRow.className = "badge-row";
+
+    const sources = Array.isArray(item.sourceTags) ? item.sourceTags : [];
+    if (sources.includes("dom")) {
+      badgeRow.appendChild(createBadge("页面元素"));
+    }
+    if (sources.includes("network")) {
+      badgeRow.appendChild(createBadge("网络捕获"));
+    }
+    if (item.mimeType) {
+      badgeRow.appendChild(createBadge(item.mimeType));
+    }
+
+    const meta = document.createElement("p");
+    meta.className = "meta";
+
+    const parts = [formatDuration(item.duration), formatBytes(item.contentLength)];
+    if (item.width && item.height) {
+      parts.push(`${item.width}x${item.height}`);
+    }
+    meta.textContent = parts.join(" | ");
+
+    const actionRow = document.createElement("div");
+    actionRow.className = "action-row";
+
+    const downloadBtn = document.createElement("button");
+    downloadBtn.type = "button";
+    downloadBtn.className = "btn primary";
+    downloadBtn.textContent = "下载";
+
+    const isHttpUrl = /^https?:/i.test(item.url || "");
+    const isStream = /\.(m3u8|m3u|mpd)([?#]|$)/i.test(item.url || "") || /mpegurl|dash\+xml/i.test(item.mimeType || "");
+    if (isStream) {
+      downloadBtn.disabled = true;
+      downloadBtn.title = "流媒体为分片列表，需借助专门合并工具下载。";
+    } else if (!isHttpUrl) {
+      downloadBtn.disabled = true;
+      downloadBtn.title = "blob/data 地址无法直接下载";
+    }
+
+    downloadBtn.addEventListener("click", () => {
+      downloadItem(item);
+    });
+
+    const copyBtn = document.createElement("button");
+    copyBtn.type = "button";
+    copyBtn.className = "btn secondary";
+    copyBtn.textContent = "复制链接";
+    copyBtn.addEventListener("click", async () => {
+      const ok = await copyToClipboard(item.url);
+      setStatus(ok ? "已复制链接" : "复制失败");
+    });
+
+    const openBtn = document.createElement("button");
+    openBtn.type = "button";
+    openBtn.className = "btn link";
+    openBtn.textContent = "打开";
+    openBtn.addEventListener("click", () => {
+      chrome.tabs.create({ url: item.url });
+    });
+
+    actionRow.appendChild(downloadBtn);
+    actionRow.appendChild(copyBtn);
+    actionRow.appendChild(openBtn);
+
+    li.appendChild(title);
+    li.appendChild(urlText);
+    li.appendChild(badgeRow);
+    li.appendChild(meta);
+    li.appendChild(actionRow);
+
+    elements.mediaList.appendChild(li);
+  }
+}
+
+async function loadMedia() {
+  if (state.tabId === null) {
+    setStatus("无法识别当前标签页");
+    return;
+  }
+
+  await sendMessage({ type: "RESCAN_TAB", tabId: state.tabId });
+  const response = await sendMessage({ type: "GET_MEDIA_FOR_TAB", tabId: state.tabId });
+
+  if (!response || !response.ok) {
+    setStatus("读取捕获结果失败");
+    return;
+  }
+
+  state.items = Array.isArray(response.items) ? response.items : [];
+  renderList();
+  setStatus(`捕获 ${state.items.length} 条媒体资源`);
+}
+
+async function clearMedia() {
+  if (state.tabId === null) {
+    return;
+  }
+
+  await sendMessage({ type: "CLEAR_MEDIA_FOR_TAB", tabId: state.tabId });
+  state.items = [];
+  renderList();
+  setStatus("已清空当前页缓存");
+}
+
+async function bootstrap() {
+  state.tabId = await getActiveTabId();
+
+  elements.refreshBtn.addEventListener("click", () => {
+    loadMedia();
+  });
+
+  elements.clearBtn.addEventListener("click", () => {
+    clearMedia();
+  });
+
+  elements.searchInput.addEventListener("input", (event) => {
+    state.query = event.target.value || "";
+    renderList();
+  });
+
+  await loadMedia();
+}
+
+bootstrap().catch((error) => {
+  setStatus(`初始化失败：${error && error.message ? error.message : String(error)}`);
+});

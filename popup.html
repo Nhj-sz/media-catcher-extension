@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>抓媒酱</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="header">
+        <div>
+          <h1>抓媒酱</h1>
+          <p id="statusText">准备就绪</p>
+        </div>
+        <button id="refreshBtn" class="btn secondary" type="button">刷新</button>
+      </header>
+
+      <section class="toolbar">
+        <input id="searchInput" type="search" placeholder="按标题或链接筛选..." />
+        <button id="clearBtn" class="btn danger" type="button">清空</button>
+      </section>
+
+      <section id="emptyState" class="empty">
+        当前没有捕获到媒体。先播放一下视频，然后点击“刷新”。
+      </section>
+
+      <ul id="mediaList" class="media-list"></ul>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

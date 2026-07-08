@@ -1,0 +1,158 @@
+:root {
+  color-scheme: light;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  width: 440px;
+  max-height: 620px;
+  background: linear-gradient(135deg, #f7fafc 0%, #ecf4ff 100%);
+  color: #1f2937;
+}
+
+.app {
+  padding: 12px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 16px;
+}
+
+#statusText {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+input[type="search"] {
+  flex: 1;
+  border: 1px solid #c8d3e3;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  background: #ffffff;
+}
+
+.btn {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn.secondary {
+  background: #e5ecf8;
+  color: #22324d;
+}
+
+.btn.danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.btn.primary {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.btn.link {
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.empty {
+  border: 1px dashed #b8c5da;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 12px;
+  color: #475569;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.media-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.media-item {
+  border: 1px solid #d6e0ee;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 10px;
+  box-shadow: 0 2px 8px rgba(13, 35, 67, 0.06);
+}
+
+.media-title {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.media-url {
+  margin: 6px 0;
+  font-size: 11px;
+  color: #334155;
+  word-break: break-all;
+}
+
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #e8f0ff;
+  color: #1d4ed8;
+}
+
+.meta {
+  font-size: 11px;
+  color: #475569;
+  margin: 6px 0;
+}
+
+.action-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.action-row .btn {
+  flex: 1;
+}

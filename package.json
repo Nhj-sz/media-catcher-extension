@@ -1,0 +1,10 @@
+{
+  "name": "zhua-mei-jiang-tests",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "description": "抓媒酱扩展的自动化测试套件（manifest / 后台 / 内容脚本 / 弹窗）",
+  "scripts": {
+    "test": "node --test"
+  }
+}

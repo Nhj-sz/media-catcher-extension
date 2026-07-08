@@ -1,0 +1,12 @@
+# 项目本地数据（含记忆与工作日志，不入库）
+.workbuddy/
+
+# 依赖
+node_modules/
+
+# 日志与临时文件
+*.log
+.DS_Store
+Thumbs.db
+*.tmp
+*~
