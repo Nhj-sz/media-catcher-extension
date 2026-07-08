@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="320" viewBox="0 0 360 320" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
+  <rect width="360" height="320" fill="#f0f2f5"/>
+  <rect x="20" y="20" width="320" height="280" rx="10" fill="#ffffff" stroke="#d0d7de"/>
+  <text x="36" y="48" font-size="15" font-weight="700" fill="#1f2328">抓媒酱</text>
+  <text x="36" y="66" font-size="11" fill="#656d76">当前标签页媒体</text>
+  <rect x="272" y="32" width="48" height="22" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="296" y="47" font-size="10" text-anchor="middle" fill="#1f2328">刷新</text>
+
+  <!-- item 1 video -->
+  <rect x="36" y="80" width="288" height="64" rx="8" fill="#ffffff" stroke="#e1e4e8"/>
+  <rect x="44" y="88" width="26" height="20" rx="5" fill="#2563eb"/>
+  <text x="57" y="102" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">V1</text>
+  <text x="78" y="103" font-size="12" font-weight="600" fill="#1f2328">示例视频标题</text>
+  <text x="44" y="124" font-size="10" fill="#656d76">02:05 · 12.4 MB · 1280×720</text>
+  <rect x="206" y="112" width="44" height="22" rx="6" fill="#1f883d"/>
+  <text x="228" y="127" font-size="10" text-anchor="middle" fill="#ffffff">下载</text>
+  <rect x="256" y="112" width="32" height="22" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="272" y="127" font-size="10" text-anchor="middle" fill="#1f2328">复制</text>
+
+  <!-- item 2 audio -->
+  <rect x="36" y="156" width="288" height="64" rx="8" fill="#ffffff" stroke="#e1e4e8"/>
+  <rect x="44" y="164" width="26" height="20" rx="5" fill="#7c3aed"/>
+  <text x="57" y="178" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">A1</text>
+  <text x="78" y="179" font-size="12" font-weight="600" fill="#1f2328">示例音频</text>
+  <text x="44" y="200" font-size="10" fill="#656d76">03:20 · 4.1 MB</text>
+  <rect x="206" y="188" width="44" height="22" rx="6" fill="#1f883d"/>
+  <text x="228" y="203" font-size="10" text-anchor="middle" fill="#ffffff">下载</text>
+  <rect x="256" y="188" width="32" height="22" rx="6" fill="#f6f8fa" stroke="#d0d7de"/>
+  <text x="272" y="203" font-size="10" text-anchor="middle" fill="#1f2328">复制</text>
+
+  <text x="36" y="252" font-size="10" fill="#8a9099">点扩展图标打开本面板；</text>
+  <text x="36" y="270" font-size="10" fill="#8a9099">完整功能见网页内悬浮面板。</text>
+  <text x="36" y="294" font-size="10" fill="#8a9099">Alt+V 快速开关悬浮面板</text>
+</svg>
