@@ -70,10 +70,21 @@ function isBiliWatchUrl(url) {
     if (!/bilibili\.com$/i.test(u.hostname)) {
       return false;
     }
-    return /(^\/(video|bangumi|cheese)\/)|(b23\.tv)/i.test(u.pathname + u.search);
+    return /(^\/(video|bangumi|cheese)\/)|(^\/list\/)/i.test(u.pathname);
   } catch {
     return false;
   }
+}
+
+function showBiliHint(text) {
+  elements.biliTitle.textContent = "B站视频";
+  elements.biliStreams.innerHTML = "";
+  const p = document.createElement("p");
+  p.className = "bili-err";
+  p.textContent = text;
+  elements.biliStreams.appendChild(p);
+  elements.biliBox.style.display = "";
+  elements.biliResolve.style.display = "none";
 }
 
 async function initBiliBox() {
@@ -86,9 +97,10 @@ async function initBiliBox() {
     return;
   }
 
+  elements.biliResolve.style.display = "";
   const info = await sendToTab(state.tabId, { type: "BILI_GET_PAGE_INFO" });
   if (!info || !info.ok || !info.info || !info.info.bvid || !info.info.cid) {
-    elements.biliBox.style.display = "none";
+    showBiliHint("当前是 B 站页面，但未能识别到视频信息。请刷新页面，或使用「录制下载」保存。");
     return;
   }
 

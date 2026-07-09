@@ -628,7 +628,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
 // ---------------------------------------------------------------------------
 // B 站取流解析 / 下载
 // ---------------------------------------------------------------------------
-function getBiliCookie() {
+async function getBiliCookie() {
   try {
     if (typeof chrome === "undefined" || !chrome.cookies || !chrome.cookies.get) {
       return "";
@@ -637,7 +637,7 @@ function getBiliCookie() {
     const names = ["SESSDATA", "bili_jct", "buvid3", "buvid4", "sid"];
     const parts = [];
     for (const n of names) {
-      const c = chrome.cookies.get({ url, name: n });
+      const c = await chrome.cookies.get({ url, name: n });
       if (c && c.value) {
         parts.push(n + "=" + c.value);
       }
@@ -699,7 +699,7 @@ async function handleBiliResolve(message, sendResponse) {
     return;
   }
   try {
-    const cookie = getBiliCookie();
+    const cookie = await getBiliCookie();
     const result = await globalThis.MCD_BILI.resolveBilibili({ bvid, cid, cookie });
     sendResponse({
       ok: result.ok,

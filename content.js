@@ -1483,35 +1483,88 @@ function togglePanel(open) {
 // ---------------------------------------------------------------------------
 // B 站视频下载（解析 playurl → 直链下载）
 // ---------------------------------------------------------------------------
+function extractBiliInitialStateFromDom() {
+  if (typeof window === "undefined" || !window.document) {
+    return null;
+  }
+
+  if (window.__INITIAL_STATE__) {
+    return window.__INITIAL_STATE__;
+  }
+
+  const scripts = Array.from(document.querySelectorAll("script"));
+  for (const script of scripts) {
+    const text = script.textContent || "";
+    const m = text.match(/window\.__INITIAL_STATE__\s*=\s*({.+?});\s*$/m);
+    if (m && m[1]) {
+      try {
+        return JSON.parse(m[1]);
+      } catch {
+        // ignore parse error
+      }
+    }
+  }
+
+  return null;
+}
+
 function getBiliPageInfo() {
   try {
     if (!/bilibili\.com/i.test(location.hostname)) {
       return null;
     }
-    const u = location.href;
-    if (!/(^\/(video|bangumi|cheese)\/)|(b23\.tv)/i.test(u)) {
+
+    const pathname = location.pathname || "";
+    if (!/(^\/(video|bangumi|cheese)\/)|(^\/list\/)/i.test(pathname)) {
       return null;
     }
-    const s = window.__INITIAL_STATE__;
-    if (!s || !s.videoData) {
+
+    const s = extractBiliInitialStateFromDom();
+    if (!s) {
       return null;
     }
+
     const vd = s.videoData;
-    const bvid = vd.bvid || (s.epInfo && s.epInfo.bvid) || "";
-    let cid = vd.cid;
-    if (!cid && s.epInfo) {
-      cid = s.epInfo.cid;
+    const ep = s.epInfo || s.epList;
+    if (!vd && !ep) {
+      return null;
     }
-    if (!cid && Array.isArray(vd.pages) && vd.pages[0]) {
-      cid = vd.pages[0].cid;
+
+    let bvid = "";
+    let cid = 0;
+    let title = "bilibili";
+
+    if (vd) {
+      bvid = vd.bvid || "";
+      cid = vd.cid || 0;
+      title = vd.title || title;
+      if (!cid && Array.isArray(vd.pages) && vd.pages[0]) {
+        cid = vd.pages[0].cid || 0;
+      }
     }
+
+    if (!bvid && s.bvid) {
+      bvid = s.bvid;
+    }
+    if (!bvid && ep && ep.bvid) {
+      bvid = ep.bvid;
+    }
+    if (!cid && ep && ep.cid) {
+      cid = ep.cid;
+    }
+    if (ep && ep.title) {
+      title = ep.title;
+    }
+
     if (!bvid || !cid) {
       return null;
     }
-    const title = String(
-      vd.title || (s.epInfo && s.epInfo.title) || "bilibili"
-    ).slice(0, 120);
-    return { bvid, cid, title };
+
+    return {
+      bvid: String(bvid),
+      cid: Number(cid),
+      title: String(title || "bilibili").slice(0, 120)
+    };
   } catch {
     return null;
   }
@@ -1522,12 +1575,28 @@ function renderBiliBox() {
   if (!box) {
     return;
   }
-  const info = getBiliPageInfo();
   box.innerHTML = "";
-  if (!info) {
+
+  const isBiliPage = /bilibili\.com/i.test(location.hostname);
+  if (!isBiliPage) {
     box.style.display = "none";
     return;
   }
+
+  const info = getBiliPageInfo();
+  if (!info) {
+    box.style.display = "";
+    const card = document.createElement("div");
+    card.className = "mcd-bili-card is-hint";
+    const p = document.createElement("p");
+    p.className = "mcd-bili-err";
+    p.textContent =
+      "当前是 B 站页面，但未能识别到视频信息。尝试刷新页面，或使用「录制下载」保存。";
+    card.appendChild(p);
+    box.appendChild(card);
+    return;
+  }
+
   box.style.display = "";
 
   const card = document.createElement("div");
