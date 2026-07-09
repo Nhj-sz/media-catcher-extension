@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "抓媒酱",
   "description": "自动嗅探网页里的视频、音频、图片直链，一键下载或录制，支持 iframe 与流媒体识别。",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "icons": {
     "16": "images/icon16.png",
     "48": "images/icon48.png",
@@ -13,6 +13,8 @@
     "storage",
     "downloads",
     "webRequest",
+    "cookies",
+    "declarativeNetRequest",
     "activeTab",
     "scripting"
   ],

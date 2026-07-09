@@ -1,7 +1,8 @@
 const state = {
   tabId: null,
   items: [],
-  query: ""
+  query: "",
+  biliInfo: null
 };
 
 const elements = {
@@ -10,7 +11,11 @@ const elements = {
   clearBtn: document.getElementById("clearBtn"),
   searchInput: document.getElementById("searchInput"),
   emptyState: document.getElementById("emptyState"),
-  mediaList: document.getElementById("mediaList")
+  mediaList: document.getElementById("mediaList"),
+  biliBox: document.getElementById("biliBox"),
+  biliTitle: document.getElementById("biliTitle"),
+  biliResolve: document.getElementById("biliResolve"),
+  biliStreams: document.getElementById("biliStreams")
 };
 
 function setStatus(message) {
@@ -40,6 +45,141 @@ function sendMessage(payload) {
 async function getActiveTabId() {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
   return tabs && tabs[0] ? tabs[0].id : null;
+}
+
+function sendToTab(tabId, payload) {
+  return new Promise((resolve) => {
+    chrome.tabs.sendMessage(tabId, payload, (response) => {
+      const err = chrome.runtime.lastError;
+      if (err) {
+        resolve({ ok: false, error: err.message });
+        return;
+      }
+      resolve(response || null);
+    });
+  });
+}
+
+// ---- B 站下载入口 ----
+function isBiliWatchUrl(url) {
+  if (!url) {
+    return false;
+  }
+  try {
+    const u = new URL(url);
+    if (!/bilibili\.com$/i.test(u.hostname)) {
+      return false;
+    }
+    return /(^\/(video|bangumi|cheese)\/)|(b23\.tv)/i.test(u.pathname + u.search);
+  } catch {
+    return false;
+  }
+}
+
+async function initBiliBox() {
+  if (state.tabId === null) {
+    return;
+  }
+  const tab = await chrome.tabs.get(state.tabId).catch(() => null);
+  if (!tab || !isBiliWatchUrl(tab.url)) {
+    elements.biliBox.style.display = "none";
+    return;
+  }
+
+  const info = await sendToTab(state.tabId, { type: "BILI_GET_PAGE_INFO" });
+  if (!info || !info.ok || !info.info || !info.info.bvid || !info.info.cid) {
+    elements.biliBox.style.display = "none";
+    return;
+  }
+
+  state.biliInfo = info.info;
+  elements.biliTitle.textContent = "B站视频：" + (info.info.title || info.info.bvid);
+  elements.biliBox.style.display = "";
+  elements.biliStreams.innerHTML = "";
+}
+
+function renderBiliStreams(streams, titleBase) {
+  elements.biliStreams.innerHTML = "";
+  if (!streams || !streams.length) {
+    const p = document.createElement("p");
+    p.className = "bili-err";
+    p.textContent = "未找到可下载流（可能需登录，或该视频受限/加密）。";
+    elements.biliStreams.appendChild(p);
+    return;
+  }
+  for (const stream of streams) {
+    const row = document.createElement("div");
+    row.className = "bili-row";
+
+    const label = document.createElement("span");
+    label.className = "bili-label";
+    label.textContent =
+      stream.kind === "mp4"
+        ? "MP4 合流 " + (stream.qualityLabel || "")
+        : "DASH " +
+          (stream.qualityLabel || "") +
+          (stream.width ? " " + stream.width + "x" + stream.height : "");
+
+    const dl = document.createElement("button");
+    dl.type = "button";
+    dl.className = "btn soft";
+    dl.textContent = stream.kind === "dash" ? "下载(视频+音频)" : "下载 MP4";
+    dl.addEventListener("click", async () => {
+      dl.disabled = true;
+      dl.textContent = "下载中…";
+      setStatus("已提交 B 站下载任务…");
+      const resp = await sendMessage({
+        type: "BILI_DOWNLOAD",
+        stream,
+        filenameBase: titleBase
+      });
+      dl.disabled = false;
+      dl.textContent = stream.kind === "dash" ? "下载(视频+音频)" : "下载 MP4";
+      if (!resp || !resp.ok) {
+        setStatus("B 站下载失败：" + ((resp && resp.error) || "未知错误"));
+        return;
+      }
+      if (resp.kind === "dash" && resp.note) {
+        setStatus("已开始下载视频与音频两个文件。" + resp.note);
+      } else {
+        setStatus("已开始下载 B 站视频（MP4）。");
+      }
+    });
+
+    row.appendChild(label);
+    row.appendChild(dl);
+    elements.biliStreams.appendChild(row);
+  }
+}
+
+function wireBiliBox() {
+  elements.biliResolve.addEventListener("click", async () => {
+    if (!state.biliInfo) {
+      return;
+    }
+    elements.biliResolve.disabled = true;
+    elements.biliResolve.textContent = "解析中…";
+    setStatus("正在向 B 站请求播放地址…");
+    const resp = await sendMessage({
+      type: "BILI_RESOLVE",
+      bvid: state.biliInfo.bvid,
+      cid: state.biliInfo.cid
+    });
+    elements.biliResolve.disabled = false;
+    elements.biliResolve.textContent = "重新解析";
+
+    if (!resp || !resp.ok) {
+      elements.biliStreams.innerHTML = "";
+      const p = document.createElement("p");
+      p.className = "bili-err";
+      p.textContent = "解析失败：" + ((resp && resp.error) || "未知错误");
+      elements.biliStreams.appendChild(p);
+      setStatus("B 站解析失败：" + ((resp && resp.error) || ""));
+      return;
+    }
+    setStatus("B 站解析成功，共 " + (resp.streams || []).length + " 个可下载项。");
+    renderBiliStreams(resp.streams, state.biliInfo.title);
+  });
 }
 
 function formatBytes(bytes) {
@@ -374,7 +514,9 @@ async function bootstrap() {
     renderList();
   });
 
+  wireBiliBox();
   await loadMedia();
+  await initBiliBox();
 }
 
 bootstrap().catch((error) => {

@@ -156,3 +156,55 @@ input[type="search"] {
 .action-row .btn {
   flex: 1;
 }
+
+.bili-box {
+  border: 1px solid #bcd1f5;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #eaf3ff, #f7fbff);
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.bili-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.bili-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1b3a5b;
+  line-height: 1.4;
+}
+
+.bili-streams {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.bili-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  background: #fff;
+  border: 1px solid #d6e0ee;
+  border-radius: 8px;
+}
+
+.bili-label {
+  font-size: 12px;
+  color: #334155;
+}
+
+.bili-err {
+  font-size: 12px;
+  color: #c0392b;
+  margin: 0;
+  line-height: 1.4;
+}

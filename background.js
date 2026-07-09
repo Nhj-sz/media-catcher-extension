@@ -1,3 +1,10 @@
+// 引入 B 站取流客户端（WBI 签名 + playurl 解析），暴露为 globalThis.MCD_BILI
+try {
+  importScripts("./bilibili_api.js");
+} catch (e) {
+  // 忽略：非 B 站场景下不会用到
+}
+
 const TAB_DATA = new Map();
 const MAX_ITEMS_PER_TAB = 300;
 
@@ -618,6 +625,180 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// B 站取流解析 / 下载
+// ---------------------------------------------------------------------------
+function getBiliCookie() {
+  try {
+    if (typeof chrome === "undefined" || !chrome.cookies || !chrome.cookies.get) {
+      return "";
+    }
+    const url = "https://www.bilibili.com";
+    const names = ["SESSDATA", "bili_jct", "buvid3", "buvid4", "sid"];
+    const parts = [];
+    for (const n of names) {
+      const c = chrome.cookies.get({ url, name: n });
+      if (c && c.value) {
+        parts.push(n + "=" + c.value);
+      }
+    }
+    return parts.join("; ");
+  } catch {
+    return "";
+  }
+}
+
+let biliRefererRuleReady = false;
+function ensureBiliRefererRule() {
+  if (
+    biliRefererRuleReady ||
+    typeof chrome === "undefined" ||
+    !chrome.declarativeNetRequest
+  ) {
+    return;
+  }
+  try {
+    const rule = {
+      id: 90001,
+      priority: 1,
+      action: {
+        type: "modifyHeaders",
+        requestHeaders: [
+          { header: "Referer", operation: "set", value: "https://www.bilibili.com/" }
+        ]
+      },
+      condition: {
+        regexFilter:
+          "https?://[^/]*\\.(bilivideo\\.com|akamaized\\.net|mcdn\\.bilibili\\.com)|https?://[^/]*pd\\.bilibili\\.com",
+        resourceTypes: [
+          "media",
+          "other",
+          "xmlhttprequest",
+          "script",
+          "stylesheet",
+          "image",
+          "font"
+        ]
+      }
+    };
+    chrome.declarativeNetRequest.updateSessionRules({
+      removeRuleIds: [90001],
+      addRules: [rule]
+    });
+    biliRefererRuleReady = true;
+  } catch {
+    // 权限不足时静默忽略；下载若 403，由上层提示
+  }
+}
+
+async function handleBiliResolve(message, sendResponse) {
+  const bvid = message.bvid;
+  const cid = message.cid;
+  if (!bvid || !cid) {
+    sendResponse({ ok: false, error: "缺少 bvid 或 cid" });
+    return;
+  }
+  try {
+    const cookie = getBiliCookie();
+    const result = await globalThis.MCD_BILI.resolveBilibili({ bvid, cid, cookie });
+    sendResponse({
+      ok: result.ok,
+      type: result.type,
+      streams: result.streams,
+      error: result.error
+    });
+  } catch (e) {
+    sendResponse({ ok: false, error: (e && e.message) || String(e) });
+  }
+}
+
+function doDownload(url, filename, backupUrls, onDone) {
+  const list = [url].concat(Array.isArray(backupUrls) ? backupUrls : []);
+  let idx = 0;
+  const attempt = () => {
+    if (idx >= list.length) {
+      onDone(new Error("所有备用地址均下载失败"));
+      return;
+    }
+    const u = list[idx++];
+    chrome.downloads.download({ url: u, filename, saveAs: false }, (downloadId) => {
+      const err = chrome.runtime.lastError;
+      if (err) {
+        attempt();
+        return;
+      }
+      onDone(null, downloadId);
+    });
+  };
+  attempt();
+}
+
+function handleBiliDownload(message, sendResponse) {
+  const stream = message.stream;
+  if (!stream) {
+    sendResponse({ ok: false, error: "缺少下载流信息" });
+    return;
+  }
+  ensureBiliRefererRule();
+
+  const base = (message.filenameBase || "bilibili")
+    .replace(/[\\/:*?"<>|]/g, "_")
+    .slice(0, 120);
+  const q = stream.qualityLabel || "";
+
+  if (stream.kind === "mp4") {
+    const filename = `${base}${q ? "-" + q : ""}${stream.filenameSuffix || ""}.mp4`;
+    doDownload(stream.url, filename, stream.backupUrls, (err, downloadId) => {
+      if (err) {
+        sendResponse({ ok: false, error: err.message });
+        return;
+      }
+      sendResponse({ ok: true, downloadId, kind: "mp4" });
+    });
+    return;
+  }
+
+  if (stream.kind === "dash") {
+    const vName = `${base}${q ? "-" + q : ""}-video.mp4`;
+    const aName = `${base}${q ? "-" + q : ""}-audio.m4a`;
+    const results = {};
+    let pending = stream.audioUrl ? 2 : 1;
+    const finish = () => {
+      pending--;
+      if (pending > 0) {
+        return;
+      }
+      const ok = Boolean(results.video || results.audio);
+      sendResponse({
+        ok,
+        kind: "dash",
+        video: results.video || null,
+        audio: results.audio || null,
+        note:
+          "DASH 流视频/音频为分开的两个文件，可用 ffmpeg 合并：" +
+          `ffmpeg -i "${vName}" -i "${aName}" -c copy "${base}${q}.mp4"`
+      });
+    };
+    doDownload(stream.videoUrl, vName, stream.videoBackupUrls, (err, id) => {
+      if (!err) {
+        results.video = id;
+      }
+      finish();
+    });
+    if (stream.audioUrl) {
+      doDownload(stream.audioUrl, aName, stream.audioBackupUrls, (err, id) => {
+        if (!err) {
+          results.audio = id;
+        }
+        finish();
+      });
+    }
+    return;
+  }
+
+  sendResponse({ ok: false, error: "未知的视频流类型：" + stream.kind });
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || typeof message.type !== "string") {
     return;
@@ -748,6 +929,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
     );
 
+    return true;
+  }
+
+  if (message.type === "BILI_RESOLVE") {
+    handleBiliResolve(message, sendResponse);
+    return true;
+  }
+
+  if (message.type === "BILI_DOWNLOAD") {
+    handleBiliDownload(message, sendResponse);
     return true;
   }
 });

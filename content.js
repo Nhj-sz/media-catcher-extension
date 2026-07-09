@@ -1067,12 +1067,55 @@ function ensureUi() {
   border-bottom: 1px solid #edf2fa;
   background: #f8fbff;
 }
+.mcd-bili-box {
+  border-bottom: 1px solid #e3ecf7;
+  background: linear-gradient(180deg, #eef6ff, #f8fbff);
+  padding: 10px;
+}
+.mcd-bili-box[style*="display: none"] {
+  display: none !important;
+}
+.mcd-bili-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mcd-bili-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1b3a5b;
+  line-height: 1.4;
+}
+.mcd-bili-streams {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mcd-bili-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  background: #fff;
+  border: 1px solid #e3ecf7;
+  border-radius: 8px;
+}
+.mcd-bili-label {
+  font-size: 12px;
+  color: #344155;
+}
+.mcd-bili-err {
+  font-size: 12px;
+  color: #c0392b;
+  margin: 0;
+  line-height: 1.4;
+}
 .mcd-list {
   list-style: none;
   margin: 0;
   padding: 8px;
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: 1 1 auto;  min-height: 0;
   overflow: auto;
   display: flex;
   flex-direction: column;
@@ -1195,6 +1238,7 @@ function ensureUi() {
       <button id="mcdExportJson" class="mcd-btn mcd-ghost mcd-mini" type="button">导出JSON</button>
     </div>
     <div id="mcdStatus" class="mcd-status">准备就绪</div>
+    <div id="mcdBiliBox" class="mcd-bili-box"></div>
     <ul id="mcdList" class="mcd-list"></ul>
   </section>
   <div id="mcdBadgeLayer" class="mcd-badge-layer"></div>
@@ -1219,6 +1263,7 @@ function ensureUi() {
     searchInput: shadow.getElementById("mcdSearch"),
     statusText: shadow.getElementById("mcdStatus"),
     list: shadow.getElementById("mcdList"),
+    biliBox: shadow.getElementById("mcdBiliBox"),
     badgeLayer: shadow.getElementById("mcdBadgeLayer")
   };
 
@@ -1429,9 +1474,162 @@ function togglePanel(open) {
     setStatus("正在刷新媒体列表...");
     refreshPanelItems(true);
     startPanelAutoRefresh();
+    renderBiliBox();
   } else {
     stopPanelAutoRefresh();
   }
+}
+
+// ---------------------------------------------------------------------------
+// B 站视频下载（解析 playurl → 直链下载）
+// ---------------------------------------------------------------------------
+function getBiliPageInfo() {
+  try {
+    if (!/bilibili\.com/i.test(location.hostname)) {
+      return null;
+    }
+    const u = location.href;
+    if (!/(^\/(video|bangumi|cheese)\/)|(b23\.tv)/i.test(u)) {
+      return null;
+    }
+    const s = window.__INITIAL_STATE__;
+    if (!s || !s.videoData) {
+      return null;
+    }
+    const vd = s.videoData;
+    const bvid = vd.bvid || (s.epInfo && s.epInfo.bvid) || "";
+    let cid = vd.cid;
+    if (!cid && s.epInfo) {
+      cid = s.epInfo.cid;
+    }
+    if (!cid && Array.isArray(vd.pages) && vd.pages[0]) {
+      cid = vd.pages[0].cid;
+    }
+    if (!bvid || !cid) {
+      return null;
+    }
+    const title = String(
+      vd.title || (s.epInfo && s.epInfo.title) || "bilibili"
+    ).slice(0, 120);
+    return { bvid, cid, title };
+  } catch {
+    return null;
+  }
+}
+
+function renderBiliBox() {
+  const box = state.elements && state.elements.biliBox;
+  if (!box) {
+    return;
+  }
+  const info = getBiliPageInfo();
+  box.innerHTML = "";
+  if (!info) {
+    box.style.display = "none";
+    return;
+  }
+  box.style.display = "";
+
+  const card = document.createElement("div");
+  card.className = "mcd-bili-card";
+
+  const title = document.createElement("div");
+  title.className = "mcd-bili-title";
+  title.textContent = "B站视频：" + info.title;
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "mcd-btn mcd-primary";
+  btn.textContent = "解析可下载清晰度";
+
+  const list = document.createElement("div");
+  list.className = "mcd-bili-streams";
+
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    btn.textContent = "解析中…";
+    list.innerHTML = "";
+    setStatus("正在向 B 站请求播放地址…");
+    const resp = await runtimeSendMessage({
+      type: "BILI_RESOLVE",
+      bvid: info.bvid,
+      cid: info.cid
+    });
+    btn.disabled = false;
+    btn.textContent = "重新解析";
+
+    if (!resp || !resp.ok) {
+      const p = document.createElement("p");
+      p.className = "mcd-bili-err";
+      p.textContent = "解析失败：" + ((resp && resp.error) || "未知错误");
+      list.appendChild(p);
+      setStatus("B 站解析失败：" + ((resp && resp.error) || ""));
+      return;
+    }
+    if (!resp.streams || !resp.streams.length) {
+      const p = document.createElement("p");
+      p.className = "mcd-bili-err";
+      p.textContent = "未找到可下载流（可能需登录，或该视频受限/加密）。";
+      list.appendChild(p);
+      setStatus("未找到可下载的 B 站视频流。");
+      return;
+    }
+    setStatus("B 站解析成功，共 " + resp.streams.length + " 个可下载项。");
+    for (const stream of resp.streams) {
+      list.appendChild(buildBiliStreamRow(stream, info.title));
+    }
+  });
+
+  card.appendChild(title);
+  card.appendChild(btn);
+  card.appendChild(list);
+  box.appendChild(card);
+}
+
+function buildBiliStreamRow(stream, titleBase) {
+  const row = document.createElement("div");
+  row.className = "mcd-bili-row";
+
+  const label = document.createElement("span");
+  label.className = "mcd-bili-label";
+  if (stream.kind === "mp4") {
+    label.textContent = "MP4 合流 " + (stream.qualityLabel || "");
+  } else {
+    label.textContent =
+      "DASH " +
+      (stream.qualityLabel || "") +
+      (stream.width ? " " + stream.width + "x" + stream.height : "");
+  }
+
+  const dl = document.createElement("button");
+  dl.type = "button";
+  dl.className = "mcd-btn mcd-soft mcd-mini";
+  dl.textContent = stream.kind === "dash" ? "下载(视频+音频)" : "下载 MP4";
+  dl.addEventListener("click", async () => {
+    dl.disabled = true;
+    dl.textContent = "下载中…";
+    setStatus("已提交 B 站下载任务…");
+    const resp = await runtimeSendMessage({
+      type: "BILI_DOWNLOAD",
+      stream,
+      filenameBase: titleBase
+    });
+    dl.disabled = false;
+    dl.textContent = stream.kind === "dash" ? "下载(视频+音频)" : "下载 MP4";
+    if (!resp || !resp.ok) {
+      setStatus("B 站下载失败：" + ((resp && resp.error) || "未知错误"));
+      return;
+    }
+    if (resp.kind === "dash" && resp.note) {
+      setStatus("已开始下载视频与音频两个文件。" + resp.note);
+    } else {
+      setStatus("已开始下载 B 站视频（MP4）。");
+    }
+  });
+
+  row.appendChild(label);
+  row.appendChild(dl);
+  return row;
 }
 
 function getTrackedElementByDomId(domId) {
@@ -2901,6 +3099,10 @@ function registerRuntimeMessageListener() {
       }
 
       if (!message || message.type !== "REQUEST_DOM_RESCAN") {
+        if (message && message.type === "BILI_GET_PAGE_INFO") {
+          sendResponse({ ok: true, info: getBiliPageInfo() });
+          return;
+        }
         sendResponse({ ok: false, ignored: true });
         return;
       }
