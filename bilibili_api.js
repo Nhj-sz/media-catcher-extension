@@ -291,11 +291,21 @@
 
     // 退回：DASH（视频 / 音频分开），返回所有可用视频清晰度
     if (data.dash && (Array.isArray(data.dash.video) || Array.isArray(data.dash.audio))) {
-      const videos = Array.isArray(data.dash.video) ? data.dash.video : [];
+      const rawVideos = Array.isArray(data.dash.video) ? data.dash.video : [];
       const audios = Array.isArray(data.dash.audio) ? data.dash.audio : [];
-      if (!videos.length) {
+      if (!rawVideos.length) {
         return { ok: false, error: "DASH 流缺少视频轨道", streams: [] };
       }
+      // B站 DASH 经常按清晰度返回多个编码格式（如 AVC / HEVC / AV1），这里按清晰度去重，保留带宽最高的那条
+      const videosByQuality = new Map();
+      for (const video of rawVideos) {
+        const q = video.id || 0;
+        const existing = videosByQuality.get(q);
+        if (!existing || (video.bandwidth || 0) > (existing.bandwidth || 0)) {
+          videosByQuality.set(q, video);
+        }
+      }
+      const videos = Array.from(videosByQuality.values()).sort((a, b) => (b.id || 0) - (a.id || 0));
       // 选带宽最高的音频作为通用音频轨（B站 DASH 音频通常不随视频清晰度变化）
       const audio = audios.length
         ? audios.slice().sort((a, b) => (b.bandwidth || 0) - (a.bandwidth || 0))[0]
@@ -317,8 +327,6 @@
           size: (video.bandwidth || 0) * (duration / 8) || 0
         };
       });
-      // 按清晰度从高到低排序，方便用户选择
-      streams.sort((a, b) => (b.quality || 0) - (a.quality || 0));
       return { ok: true, type: "dash", streams };
     }
 

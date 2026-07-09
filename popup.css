@@ -19,13 +19,18 @@
 body {
   margin: 0;
   width: 440px;
-  max-height: 620px;
+  max-height: 600px;
+  overflow-y: auto;
   background: linear-gradient(135deg, #f7fafc 0%, #ecf4ff 100%);
   color: #1f2937;
 }
 
 .app {
   padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
 }
 
 .header {
@@ -246,6 +251,9 @@ input[type="search"] {
   flex-direction: column;
   gap: 6px;
   margin-top: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .bili-row {

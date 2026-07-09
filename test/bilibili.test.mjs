@@ -94,6 +94,31 @@ test("parsePlayUrl 解析 DASH 返回所有可用视频清晰度", () => {
   assert.equal(r.streams[2].quality, 32);
 });
 
+test("parsePlayUrl 解析 DASH 按清晰度去重", () => {
+  const json = {
+    code: 0,
+    data: {
+      dash: {
+        duration: 100,
+        video: [
+          { id: 80, baseUrl: "https://v/1080-avc.m4s", backupUrl: [], bandwidth: 3000, width: 1920, height: 1080 },
+          { id: 80, baseUrl: "https://v/1080-hevc.m4s", backupUrl: [], bandwidth: 2500, width: 1920, height: 1080 },
+          { id: 64, baseUrl: "https://v/720.m4s", backupUrl: [], bandwidth: 1500, width: 1280, height: 720 },
+          { id: 64, baseUrl: "https://v/720-low.m4s", backupUrl: [], bandwidth: 1200, width: 1280, height: 720 }
+        ],
+        audio: [{ id: 30280, baseUrl: "https://a/3.m4s", backupUrl: [], bandwidth: 200 }]
+      }
+    }
+  };
+  const r = B.parsePlayUrl(json, "dash");
+  assert.equal(r.ok, true);
+  assert.equal(r.streams.length, 2);
+  assert.equal(r.streams[0].quality, 80);
+  assert.equal(r.streams[0].videoUrl, "https://v/1080-avc.m4s");
+  assert.equal(r.streams[1].quality, 64);
+  assert.equal(r.streams[1].videoUrl, "https://v/720.m4s");
+});
+
 test("parsePlayUrl 接口报错时返回 ok=false", () => {
   const r = B.parsePlayUrl({ code: -412, message: "请求被拦截" }, "mp4");
   assert.equal(r.ok, false);
