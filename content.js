@@ -1508,6 +1508,35 @@ function extractBiliInitialStateFromDom() {
   return null;
 }
 
+function parseBvidFromUrl() {
+  const pathname = location.pathname || "";
+  let m;
+  if ((m = pathname.match(/\/(?:video|cheese\/play)\/(BV[\w]+)/i))) {
+    return m[1];
+  }
+  if ((m = pathname.match(/\/bangumi\/play\/(ss\d+|ep\d+)/i))) {
+    return m[1];
+  }
+  return null;
+}
+
+function parseBvidFromDom() {
+  const s = extractBiliInitialStateFromDom();
+  if (!s) {
+    return null;
+  }
+  if (s.bvid) {
+    return String(s.bvid);
+  }
+  if (s.videoData && s.videoData.bvid) {
+    return String(s.videoData.bvid);
+  }
+  if (s.epInfo && s.epInfo.bvid) {
+    return String(s.epInfo.bvid);
+  }
+  return null;
+}
+
 function getBiliPageInfo() {
   try {
     if (!/bilibili\.com/i.test(location.hostname)) {
@@ -1519,51 +1548,39 @@ function getBiliPageInfo() {
       return null;
     }
 
+    // 优先从 URL 拿 bvid，不依赖全局变量（新版 B 站可能改结构）
+    const bvid = parseBvidFromUrl() || parseBvidFromDom();
+    if (!bvid) {
+      return null;
+    }
+
     const s = extractBiliInitialStateFromDom();
-    if (!s) {
-      return null;
-    }
-
-    const vd = s.videoData;
-    const ep = s.epInfo || s.epList;
-    if (!vd && !ep) {
-      return null;
-    }
-
-    let bvid = "";
     let cid = 0;
-    let title = "bilibili";
+    let title = bvid;
 
-    if (vd) {
-      bvid = vd.bvid || "";
-      cid = vd.cid || 0;
-      title = vd.title || title;
-      if (!cid && Array.isArray(vd.pages) && vd.pages[0]) {
-        cid = vd.pages[0].cid || 0;
+    if (s) {
+      const vd = s.videoData;
+      const ep = s.epInfo || (Array.isArray(s.epList) ? s.epList[0] : null);
+      if (vd) {
+        cid = vd.cid || 0;
+        title = vd.title || title;
+        if (!cid && Array.isArray(vd.pages) && vd.pages[0]) {
+          cid = vd.pages[0].cid || 0;
+        }
       }
-    }
-
-    if (!bvid && s.bvid) {
-      bvid = s.bvid;
-    }
-    if (!bvid && ep && ep.bvid) {
-      bvid = ep.bvid;
-    }
-    if (!cid && ep && ep.cid) {
-      cid = ep.cid;
-    }
-    if (ep && ep.title) {
-      title = ep.title;
-    }
-
-    if (!bvid || !cid) {
-      return null;
+      if (!cid && ep) {
+        cid = ep.cid || 0;
+        if (ep.title) {
+          title = ep.title;
+        }
+      }
     }
 
     return {
       bvid: String(bvid),
-      cid: Number(cid),
-      title: String(title || "bilibili").slice(0, 120)
+      cid: Number(cid) || 0,
+      title: String(title || bvid).slice(0, 120),
+      needsCidResolve: !cid
     };
   } catch {
     return null;

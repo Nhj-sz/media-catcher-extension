@@ -99,7 +99,7 @@ async function initBiliBox() {
 
   elements.biliResolve.style.display = "";
   const info = await sendToTab(state.tabId, { type: "BILI_GET_PAGE_INFO" });
-  if (!info || !info.ok || !info.info || !info.info.bvid || !info.info.cid) {
+  if (!info || !info.ok || !info.info || !info.info.bvid) {
     showBiliHint("当前是 B 站页面，但未能识别到视频信息。请刷新页面，或使用「录制下载」保存。");
     return;
   }

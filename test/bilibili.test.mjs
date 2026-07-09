@@ -108,3 +108,55 @@ test("qnLabel 映射清晰度", () => {
   assert.equal(B.qnLabel(80), "1080P");
   assert.equal(B.qnLabel(99999), "清晰度99999");
 });
+
+test("resolveBilibili 在 cid 缺失时自动用 getView 补 cid", async () => {
+  // 伪造 fetch：第一次 getView 返回 cid，后续 playurl 返回 durl
+  const origFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, opts) => {
+    calls.push(String(url));
+    if (String(url).includes("/x/web-interface/nav")) {
+      return {
+        ok: true,
+        json: async () => ({
+          code: 0,
+          data: {
+            wbi_img: {
+              img_url: "https://i0.hdslb.com/bfs/wbi/img/abcdef.png",
+              sub_url: "https://i0.hdslb.com/bfs/wbi/img/123456.png"
+            }
+          }
+        })
+      };
+    }
+    if (String(url).includes("/x/web-interface/view")) {
+      return {
+        ok: true,
+        json: async () => ({ code: 0, data: { cid: 123456, title: "测试视频", aid: 1 } })
+      };
+    }
+    if (String(url).includes("/x/player/wbi/playurl")) {
+      return {
+        ok: true,
+        json: async () => ({
+          code: 0,
+          data: {
+            quality: 80,
+            durl: [{ url: "https://x/1.mp4", backup_url: [], size: 100 }]
+          }
+        })
+      };
+    }
+    return { ok: false, json: async () => ({}) };
+  };
+
+  try {
+    const r = await B.resolveBilibili({ bvid: "BV1xx", cid: 0, cookie: "" });
+    assert.equal(r.ok, true);
+    assert.equal(r.streams.length, 1);
+    assert.equal(r.streams[0].url, "https://x/1.mp4");
+    assert.ok(calls.some((c) => c.includes("/x/web-interface/view")));
+  } finally {
+    globalThis.fetch = origFetch;
+  }
+});

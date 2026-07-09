@@ -354,7 +354,49 @@
   }
 
   // 依次尝试多种取流策略，返回第一个有可用流的解析结果。
+  async function getView(bvid, cookie) {
+    const headers = {
+      "User-Agent": UA,
+      Referer: "https://www.bilibili.com/"
+    };
+    if (cookie) {
+      headers["Cookie"] = cookie;
+    }
+    const url = "https://api.bilibili.com/x/web-interface/view?bvid=" + encodeURIComponent(bvid);
+    const res = await fetch(url, { headers });
+    if (!res.ok) {
+      throw new Error("获取视频信息失败：HTTP " + res.status);
+    }
+    const json = await res.json();
+    if (json.code !== 0 || !json.data) {
+      throw new Error("获取视频信息失败：" + ((json && json.message) || "未知错误"));
+    }
+    const data = json.data;
+    let cid = data.cid || 0;
+    if (!cid && Array.isArray(data.pages) && data.pages[0]) {
+      cid = data.pages[0].cid || 0;
+    }
+    return {
+      cid: Number(cid) || 0,
+      title: data.title || "",
+      aid: data.aid || 0
+    };
+  }
+
   async function resolveBilibili({ bvid, cid, cookie }) {
+    // cid 缺失时先用官方 view 接口补（只靠 URL 里的 bvid 也能下载）
+    if (!cid) {
+      try {
+        const view = await getView(bvid, cookie);
+        cid = view.cid;
+      } catch (e) {
+        // 忽略，交给下方策略链返回错误
+      }
+    }
+    if (!cid) {
+      return { ok: false, error: "无法获取视频 cid（可能视频不存在或受限）", streams: [] };
+    }
+
     const strategies = [
       { name: "html5-mp4", fnval: 1, extra: { platform: "html5", high_quality: 1 } },
       { name: "mp4-look", fnval: 1, extra: { try_look: 1 } },
@@ -393,6 +435,7 @@
     getMixinKey,
     encWbi,
     getWbiKeys,
+    getView,
     parsePlayUrl,
     resolveBilibili,
     qnLabel
