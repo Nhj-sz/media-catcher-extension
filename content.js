@@ -910,6 +910,32 @@ function ensureUi() {
   font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   color: #132036;
 }
+:host {
+  --mcd-bg: #ffffff;
+  --mcd-bg-soft: #f8fbff;
+  --mcd-surface: #ffffff;
+  --mcd-surface-2: #f1f5f9;
+  --mcd-border: #d9e2f2;
+  --mcd-border-soft: #edf2fa;
+  --mcd-text: #1f2937;
+  --mcd-text-muted: #475569;
+  --mcd-text-dim: #344155;
+  --mcd-primary: #2563eb;
+  --mcd-primary-text: #ffffff;
+  --mcd-ghost-bg: #e7eefc;
+  --mcd-ghost-text: #1d3f78;
+  --mcd-soft-bg: #f1f5f9;
+  --mcd-soft-text: #1e293b;
+  --mcd-danger-bg: #fee2e2;
+  --mcd-danger-text: #991b1b;
+  --mcd-accent-grad: linear-gradient(180deg, #eef6ff, #f8fbff);
+  --mcd-chip-bg: #eaf1ff;
+  --mcd-chip-text: #1d4ed8;
+  --mcd-shadow: 0 16px 36px rgba(9, 32, 77, 0.18);
+  --mcd-radius: 12px;
+  --mcd-radius-sm: 8px;
+  --mcd-icon: #5b6b86;
+}
 .mcd-notice {
   position: fixed;
   top: 12px;
@@ -1136,6 +1162,64 @@ function ensureUi() {
   font-size: 12px;
   line-height: 1.35;
 }
+.mcd-ico {
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+}
+.mcd-ico svg { display: block; }
+.mcd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+.mcd-item-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.mcd-item-type {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mcd-surface-2);
+  color: var(--mcd-icon);
+}
+.mcd-item-type svg { width: 16px; height: 16px; }
+.mcd-item-head {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.mcd-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 22px 14px;
+  color: var(--mcd-text-muted);
+}
+.mcd-empty svg { color: var(--mcd-icon); opacity: 0.85; }
+.mcd-empty .mcd-empty-text { font-size: 12px; line-height: 1.5; }
+.mcd-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--mcd-border-soft);
+  overflow: hidden;
+  margin: 6px 0 0;
+}
+.mcd-progress > i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--mcd-primary);
+  transition: width 0.2s ease;
+}
 .mcd-item-url {
   margin: 5px 0;
   font-size: 10px;
@@ -1214,6 +1298,81 @@ function ensureUi() {
     bottom: 10px;
   }
 }
+@media (prefers-color-scheme: dark) {
+  :host {
+    --mcd-bg: #0f172a;
+    --mcd-bg-soft: #111c30;
+    --mcd-surface: #1e293b;
+    --mcd-surface-2: #273449;
+    --mcd-border: #334155;
+    --mcd-border-soft: #2a3a52;
+    --mcd-text: #e5e7eb;
+    --mcd-text-muted: #94a3b8;
+    --mcd-text-dim: #cbd5e1;
+    --mcd-primary: #3b82f6;
+    --mcd-primary-text: #ffffff;
+    --mcd-ghost-bg: #1e3a5f;
+    --mcd-ghost-text: #93c5fd;
+    --mcd-soft-bg: #273449;
+    --mcd-soft-text: #cbd5e1;
+    --mcd-danger-bg: #3f1d1d;
+    --mcd-danger-text: #fca5a5;
+    --mcd-accent-grad: linear-gradient(180deg, #13233f, #0f1d36);
+    --mcd-chip-bg: #1e3a5f;
+    --mcd-chip-text: #93c5fd;
+    --mcd-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+    --mcd-icon: #94a3b8;
+  }
+  .mcd-panel {
+    background: var(--mcd-bg);
+    border-color: var(--mcd-border);
+    box-shadow: var(--mcd-shadow);
+  }
+  .mcd-head { border-color: var(--mcd-border-soft); }
+  .mcd-title { color: var(--mcd-text); }
+  .mcd-tools { border-color: var(--mcd-border-soft); }
+  .mcd-input {
+    background: var(--mcd-surface-2);
+    border-color: var(--mcd-border);
+    color: var(--mcd-text);
+  }
+  .mcd-status {
+    background: var(--mcd-bg-soft);
+    color: var(--mcd-text-dim);
+    border-color: var(--mcd-border-soft);
+  }
+  .mcd-bili-box {
+    background: var(--mcd-accent-grad);
+    border-color: var(--mcd-border);
+  }
+  .mcd-bili-title, .mcd-bili-label { color: var(--mcd-text); }
+  .mcd-bili-row {
+    background: var(--mcd-surface);
+    border-color: var(--mcd-border);
+  }
+  .mcd-list { background: transparent; }
+  .mcd-item {
+    background: var(--mcd-surface);
+    border-color: var(--mcd-border);
+  }
+  .mcd-item.is-selected {
+    border-color: var(--mcd-primary);
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.4);
+  }
+  .mcd-item-title { color: var(--mcd-text); }
+  .mcd-item-url { color: var(--mcd-text-muted); }
+  .mcd-item-meta { color: var(--mcd-text-muted); }
+  .mcd-chip { background: var(--mcd-chip-bg); color: var(--mcd-chip-text); }
+  .mcd-empty {
+    background: var(--mcd-bg-soft);
+    color: var(--mcd-text-muted);
+    border-color: var(--mcd-border-soft);
+  }
+  .mcd-btn.mcd-primary { background: var(--mcd-primary); color: var(--mcd-primary-text); }
+  .mcd-btn.mcd-ghost { background: var(--mcd-ghost-bg); color: var(--mcd-ghost-text); }
+  .mcd-btn.mcd-soft { background: var(--mcd-soft-bg); color: var(--mcd-soft-text); }
+  .mcd-btn.mcd-danger { background: var(--mcd-danger-bg); color: var(--mcd-danger-text); }
+}
 </style>
 <div class="mcd-root">
   <div id="mcdNotice" class="mcd-notice" role="status" aria-live="polite"></div>
@@ -1222,20 +1381,20 @@ function ensureUi() {
   <section id="mcdPanel" class="mcd-panel" aria-label="媒体面板">
     <div id="mcdPanelHead" class="mcd-head">
       <h2 class="mcd-title">抓媒酱</h2>
-      <button id="mcdRefresh" class="mcd-btn mcd-ghost" type="button">刷新</button>
-      <button id="mcdClose" class="mcd-btn mcd-soft" type="button">隐藏</button>
+      <button id="mcdRefresh" class="mcd-btn mcd-ghost" type="button"><span class="mcd-ico"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></span><span class="mcd-label">刷新</span></button>
+      <button id="mcdClose" class="mcd-btn mcd-soft" type="button"><span class="mcd-ico"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></span><span class="mcd-label">隐藏</span></button>
     </div>
     <div class="mcd-tools">
       <input id="mcdSearch" class="mcd-input" type="search" placeholder="按标题或链接搜索" />
-      <button id="mcdTypeFilter" class="mcd-btn mcd-soft" type="button">类型: 全部</button>
-      <button id="mcdOnlyPlaying" class="mcd-btn mcd-soft" type="button">仅播放中: 关</button>
-      <button id="mcdClear" class="mcd-btn mcd-danger" type="button">清空</button>
+      <button id="mcdTypeFilter" class="mcd-btn mcd-soft" type="button"><span class="mcd-ico"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg></span><span class="mcd-label">类型: 全部</span></button>
+      <button id="mcdOnlyPlaying" class="mcd-btn mcd-soft" type="button"><span class="mcd-ico"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16l13-8z"/></svg></span><span class="mcd-label">仅播放中: 关</span></button>
+      <button id="mcdClear" class="mcd-btn mcd-danger" type="button"><span class="mcd-ico"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg></span><span class="mcd-label">清空</span></button>
     </div>
     <div class="mcd-tools secondary">
-      <button id="mcdBatchDownload" class="mcd-btn mcd-primary" type="button">批量下载</button>
-      <button id="mcdExportTxt" class="mcd-btn mcd-ghost mcd-mini" type="button">导出TXT</button>
-      <button id="mcdExportCsv" class="mcd-btn mcd-ghost mcd-mini" type="button">导出CSV</button>
-      <button id="mcdExportJson" class="mcd-btn mcd-ghost mcd-mini" type="button">导出JSON</button>
+      <button id="mcdBatchDownload" class="mcd-btn mcd-primary" type="button"><span class="mcd-ico"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg></span><span class="mcd-label">批量下载</span></button>
+      <button id="mcdExportTxt" class="mcd-btn mcd-ghost mcd-mini" type="button"><span class="mcd-ico"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></span><span class="mcd-label">TXT</span></button>
+      <button id="mcdExportCsv" class="mcd-btn mcd-ghost mcd-mini" type="button"><span class="mcd-ico"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></span><span class="mcd-label">CSV</span></button>
+      <button id="mcdExportJson" class="mcd-btn mcd-ghost mcd-mini" type="button"><span class="mcd-ico"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></span><span class="mcd-label">JSON</span></button>
     </div>
     <div id="mcdStatus" class="mcd-status">准备就绪</div>
     <div id="mcdBiliBox" class="mcd-bili-box"></div>
@@ -2577,18 +2736,21 @@ function updateQuickActionsState() {
   }
 
   if (state.elements.typeFilterBtn) {
-    state.elements.typeFilterBtn.textContent = `类型: ${getMediaTypeFilterLabel(state.mediaTypeFilter)}`;
+    const tf = state.elements.typeFilterBtn.querySelector(".mcd-label");
+    if (tf) tf.textContent = `类型: ${getMediaTypeFilterLabel(state.mediaTypeFilter)}`;
     state.elements.typeFilterBtn.classList.toggle("is-active", state.mediaTypeFilter !== "all");
   }
 
   if (state.elements.onlyPlayingBtn) {
-    state.elements.onlyPlayingBtn.textContent = state.onlyPlayingOnly ? "仅播放中: 开" : "仅播放中: 关";
+    const op = state.elements.onlyPlayingBtn.querySelector(".mcd-label");
+    if (op) op.textContent = state.onlyPlayingOnly ? "仅播放中: 开" : "仅播放中: 关";
     state.elements.onlyPlayingBtn.classList.toggle("is-active", state.onlyPlayingOnly);
   }
 
   if (state.elements.batchDownloadBtn) {
     state.elements.batchDownloadBtn.disabled = state.isBatchDownloading;
-    state.elements.batchDownloadBtn.textContent = state.isBatchDownloading ? "批量下载中..." : "批量下载";
+    const bd = state.elements.batchDownloadBtn.querySelector(".mcd-label");
+    if (bd) bd.textContent = state.isBatchDownloading ? "批量下载中..." : "批量下载";
   }
 }
 
@@ -2873,6 +3035,11 @@ async function batchDownloadFilteredItems() {
         failCount += 1;
       }
 
+      const doneCount = successCount + failCount;
+      const bd = state.elements.batchDownloadBtn.querySelector(".mcd-label");
+      if (bd) bd.textContent = `批量下载 ${doneCount}/${downloadable.length}`;
+      setStatus(`正在批量下载：${doneCount}/${downloadable.length}`);
+
       await new Promise((resolve) => setTimeout(resolve, 120));
     }
 
@@ -2881,6 +3048,36 @@ async function batchDownloadFilteredItems() {
     state.isBatchDownloading = false;
     updateQuickActionsState();
   }
+}
+
+const MCD_ICONS = {
+  refresh: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>',
+  close: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg>',
+  batch: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>',
+  export: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>',
+  locate: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.5-7-11a7 7 0 0 1 14 0c0 4.5-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>',
+  download: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>',
+  record: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="6"/></svg>',
+  stop: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>',
+  copy: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>',
+  search: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>',
+  filter: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>',
+  sort: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v18"/><path d="M4 7l4-4 4 4"/><path d="M16 21V3"/><path d="M12 17l4 4 4-4"/></svg>',
+  clear: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>',
+  image: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 16-5-5L5 21"/></svg>',
+  video: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg>',
+  audio: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l10-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg>',
+  play: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16l13-8z"/></svg>',
+  empty: '<svg viewBox="0 0 120 90" width="96" height="72" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="20" width="92" height="56" rx="10"/><path d="M14 38h92"/><circle cx="34" cy="29" r="3"/><path d="m40 70 18-20 14 14 10-10 16 16"/><circle cx="44" cy="54" r="7"/></svg>'
+};
+
+function mcdIcon(name) {
+  return MCD_ICONS[name] || "";
+}
+
+function typeIconFor(item) {
+  const t = detectItemType(item);
+  return t === "image" ? "image" : t === "audio" ? "audio" : "video";
 }
 
 function renderPanelList() {
@@ -2898,9 +3095,13 @@ function renderPanelList() {
   if (!filtered.length) {
     const empty = document.createElement("li");
     empty.className = "mcd-empty";
-    empty.textContent = state.panelItems.length
-      ? "当前筛选条件没有匹配结果。"
-      : "尚未捕获到媒体资源，请先播放视频再点击刷新。";
+    empty.innerHTML =
+      mcdIcon("empty") +
+      '<span class="mcd-empty-text">' +
+      (state.panelItems.length
+        ? "当前筛选条件没有匹配结果。"
+        : "尚未捕获到媒体资源，请先播放视频再点击刷新。") +
+      "</span>";
     list.appendChild(empty);
     return;
   }
@@ -2916,6 +3117,16 @@ function renderPanelList() {
     title.className = "mcd-item-title";
     const titlePrefix = item.displayLabel ? `[${item.displayLabel}] ` : item.domId ? `[${item.domId.toUpperCase()}] ` : "";
     title.textContent = `${titlePrefix}${item.label || item.filenameHint || shortUrl(item.url) || "未命名媒体"}`;
+
+    const typeIcon = document.createElement("div");
+    typeIcon.className = "mcd-item-type";
+    typeIcon.innerHTML = mcdIcon(typeIconFor(item));
+
+    const head = document.createElement("div");
+    head.className = "mcd-item-head";
+
+    const top = document.createElement("div");
+    top.className = "mcd-item-top";
 
     const urlNode = document.createElement("p");
     urlNode.className = "mcd-item-url";
@@ -2974,7 +3185,7 @@ function renderPanelList() {
     const locateBtn = document.createElement("button");
     locateBtn.type = "button";
     locateBtn.className = "mcd-btn mcd-ghost";
-    locateBtn.textContent = "定位";
+    locateBtn.innerHTML = mcdIcon("locate") + "<span>定位</span>";
     if (!item.domId || item.inFrame) {
       locateBtn.disabled = true;
       if (item.inFrame) {
@@ -2990,7 +3201,7 @@ function renderPanelList() {
     const downloadBtn = document.createElement("button");
     downloadBtn.type = "button";
     downloadBtn.className = "mcd-btn mcd-primary";
-    downloadBtn.textContent = "下载";
+    downloadBtn.innerHTML = mcdIcon("download") + "<span>下载</span>";
     if (isStreamItem(item)) {
       downloadBtn.disabled = true;
       downloadBtn.title = "流媒体为分片列表，需借助专门合并工具（如 yt-dlp / ffmpeg）下载。可点“复制”拿到地址。";
@@ -3024,7 +3235,7 @@ function renderPanelList() {
       typeof MediaRecorder !== "undefined";
     const recordingNow = item.domId ? isRecordingActive(item.domId) : false;
 
-    recordBtn.textContent = recordingNow ? "停止录制" : "录制下载";
+    recordBtn.innerHTML = mcdIcon(recordingNow ? "stop" : "record") + "<span>" + (recordingNow ? "停止录制" : "录制下载") + "</span>";
 
     if ((!isVideoItem && !isAudioItem) || !item.domId) {
       recordBtn.disabled = true;
@@ -3055,7 +3266,7 @@ function renderPanelList() {
     const copyBtn = document.createElement("button");
     copyBtn.type = "button";
     copyBtn.className = "mcd-btn mcd-soft";
-    copyBtn.textContent = "复制";
+    copyBtn.innerHTML = mcdIcon("copy") + "<span>复制</span>";
     if (!directUrl && !item.url) {
       copyBtn.disabled = true;
     }
@@ -3069,10 +3280,13 @@ function renderPanelList() {
     actions.appendChild(recordBtn);
     actions.appendChild(copyBtn);
 
-    li.appendChild(title);
-    li.appendChild(urlNode);
-    li.appendChild(meta);
-    li.appendChild(chips);
+    head.appendChild(title);
+    head.appendChild(urlNode);
+    head.appendChild(meta);
+    head.appendChild(chips);
+    top.appendChild(typeIcon);
+    top.appendChild(head);
+    li.appendChild(top);
     li.appendChild(actions);
 
     list.appendChild(li);

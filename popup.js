@@ -1,3 +1,27 @@
+const POPUP_ICONS = {
+  download: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>',
+  copy: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>',
+  open: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M19 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6"/></svg>',
+  image: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 16-5-5L5 21"/></svg>',
+  video: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg>',
+  audio: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l10-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg>'
+};
+
+function popupIcon(name) {
+  return POPUP_ICONS[name] || "";
+}
+
+function popupItemType(item) {
+  const mime = (item.mimeType || "").toLowerCase();
+  if (mime.startsWith("image/")) return "image";
+  if (mime.startsWith("audio/")) return "audio";
+  if (mime.startsWith("video/")) return "video";
+  const u = (item.url || "").toLowerCase();
+  if (/\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/.test(u)) return "image";
+  if (/\.(mp3|wav|ogg|flac|aac|m4a)(\?|$)/.test(u)) return "audio";
+  return "video";
+}
+
 const state = {
   tabId: null,
   items: [],
@@ -136,7 +160,7 @@ function renderBiliStreams(streams, titleBase) {
     const dl = document.createElement("button");
     dl.type = "button";
     dl.className = "btn soft";
-    dl.textContent = stream.kind === "dash" ? "尝试下载 MP4" : "下载 MP4";
+    dl.innerHTML = popupIcon("download") + "<span>" + (stream.kind === "dash" ? "尝试下载 MP4" : "下载 MP4") + "</span>";
     dl.addEventListener("click", async () => {
       dl.disabled = true;
       dl.textContent = "下载中…";
@@ -148,7 +172,7 @@ function renderBiliStreams(streams, titleBase) {
         pageInfo
       });
       dl.disabled = false;
-      dl.textContent = stream.kind === "dash" ? "尝试下载 MP4" : "下载 MP4";
+      dl.innerHTML = popupIcon("download") + "<span>" + (stream.kind === "dash" ? "尝试下载 MP4" : "下载 MP4") + "</span>";
       if (!resp || !resp.ok) {
         setStatus("B 站下载失败：" + ((resp && resp.error) || "未知错误"));
         return;
@@ -167,12 +191,13 @@ function renderBiliStreams(streams, titleBase) {
 }
 
 function wireBiliBox() {
+  const resolveLabel = elements.biliResolve.querySelector(".bili-resolve-label");
   elements.biliResolve.addEventListener("click", async () => {
     if (!state.biliInfo) {
       return;
     }
     elements.biliResolve.disabled = true;
-    elements.biliResolve.textContent = "解析中…";
+    if (resolveLabel) resolveLabel.textContent = "解析中…";
     setStatus("正在向 B 站请求播放地址…");
     const resp = await sendMessage({
       type: "BILI_RESOLVE",
@@ -180,7 +205,7 @@ function wireBiliBox() {
       cid: state.biliInfo.cid
     });
     elements.biliResolve.disabled = false;
-    elements.biliResolve.textContent = "重新解析";
+    if (resolveLabel) resolveLabel.textContent = "重新解析";
 
     if (!resp || !resp.ok) {
       elements.biliStreams.innerHTML = "";
@@ -398,6 +423,16 @@ function renderList() {
     title.className = "media-title";
     title.textContent = item.label || item.filenameHint || shortUrl(item.url) || "未命名媒体";
 
+    const typeIcon = document.createElement("div");
+    typeIcon.className = "media-type";
+    typeIcon.innerHTML = popupIcon(popupItemType(item));
+
+    const head = document.createElement("div");
+    head.className = "media-head";
+
+    const top = document.createElement("div");
+    top.className = "media-item-top";
+
     const urlText = document.createElement("p");
     urlText.className = "media-url";
     urlText.textContent = shortUrl(item.url);
@@ -431,7 +466,7 @@ function renderList() {
     const downloadBtn = document.createElement("button");
     downloadBtn.type = "button";
     downloadBtn.className = "btn primary";
-    downloadBtn.textContent = "下载";
+    downloadBtn.innerHTML = popupIcon("download") + "<span>下载</span>";
 
     const directUrl = pickDownloadUrl(item);
     const isStream = isStreamUrl(item.url || "");
@@ -454,7 +489,7 @@ function renderList() {
     const copyBtn = document.createElement("button");
     copyBtn.type = "button";
     copyBtn.className = "btn secondary";
-    copyBtn.textContent = "复制链接";
+    copyBtn.innerHTML = popupIcon("copy") + "<span>复制链接</span>";
     copyBtn.addEventListener("click", async () => {
       const ok = await copyToClipboard(item.url);
       setStatus(ok ? "已复制链接" : "复制失败");
@@ -463,7 +498,7 @@ function renderList() {
     const openBtn = document.createElement("button");
     openBtn.type = "button";
     openBtn.className = "btn link";
-    openBtn.textContent = "打开";
+    openBtn.innerHTML = popupIcon("open") + "<span>打开</span>";
     openBtn.addEventListener("click", () => {
       chrome.tabs.create({ url: item.url });
     });
@@ -472,10 +507,13 @@ function renderList() {
     actionRow.appendChild(copyBtn);
     actionRow.appendChild(openBtn);
 
-    li.appendChild(title);
-    li.appendChild(urlText);
-    li.appendChild(badgeRow);
-    li.appendChild(meta);
+    head.appendChild(title);
+    head.appendChild(urlText);
+    head.appendChild(badgeRow);
+    head.appendChild(meta);
+    top.appendChild(typeIcon);
+    top.appendChild(head);
+    li.appendChild(top);
     li.appendChild(actionRow);
 
     elements.mediaList.appendChild(li);

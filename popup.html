@@ -13,7 +13,7 @@
           <h1>抓媒酱</h1>
           <p id="statusText">准备就绪</p>
         </div>
-        <button id="refreshBtn" class="btn secondary" type="button">刷新</button>
+        <button id="refreshBtn" class="btn secondary" type="button"><span class="ico"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></span><span>刷新</span></button>
       </header>
 
       <section class="toolbar">
@@ -22,13 +22,14 @@
       </section>
 
       <section id="emptyState" class="empty">
-        当前没有捕获到媒体。先播放一下视频，然后点击“刷新”。
+        <svg viewBox="0 0 120 90" width="96" height="72" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="20" width="92" height="56" rx="10"/><path d="M14 38h92"/><circle cx="34" cy="29" r="3"/><path d="m40 70 18-20 14 14 10-10 16 16"/><circle cx="44" cy="54" r="7"/></svg>
+        <span>当前没有捕获到媒体。先播放一下视频，然后点击“刷新”。</span>
       </section>
 
       <section id="biliBox" class="bili-box" style="display:none">
         <div class="bili-head">
           <span id="biliTitle" class="bili-title">B站视频</span>
-          <button id="biliResolve" class="btn primary" type="button">解析可下载清晰度</button>
+          <button id="biliResolve" class="btn primary" type="button"><span class="ico"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg></span><span class="bili-resolve-label">解析可下载清晰度</span></button>
         </div>
         <div id="biliStreams" class="bili-streams"></div>
       </section>
