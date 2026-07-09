@@ -119,6 +119,36 @@ test("parsePlayUrl 解析 DASH 按清晰度去重", () => {
   assert.equal(r.streams[1].videoUrl, "https://v/720.m4s");
 });
 
+test("parsePlayUrl DASH 按清晰度去重，同清晰度多个编码只保留一条", () => {
+  const json = {
+    code: 0,
+    data: {
+      dash: {
+        duration: 100,
+        video: [
+          // 同一 1080P（id=80）返回 AVC 与 HEVC 两条，应去重保留带宽更高的
+          { id: 80, baseUrl: "https://v/1080-avc.m4s", backupUrl: [], bandwidth: 3000, width: 1920, height: 1080 },
+          { id: 80, baseUrl: "https://v/1080-hevc.m4s", backupUrl: [], bandwidth: 2200, width: 1920, height: 1080 },
+          { id: 64, baseUrl: "https://v/720.m4s", backupUrl: [], bandwidth: 1500, width: 1280, height: 720 },
+          { id: 64, baseUrl: "https://v/720-2.m4s", backupUrl: [], bandwidth: 900, width: 1280, height: 720 },
+          { id: 32, baseUrl: "https://v/480.m4s", backupUrl: [], bandwidth: 800, width: 852, height: 480 }
+        ],
+        audio: [{ id: 30280, baseUrl: "https://a/3.m4s", backupUrl: [], bandwidth: 200 }]
+      }
+    }
+  };
+  const r = B.parsePlayUrl(json, "dash");
+  assert.equal(r.ok, true);
+  assert.equal(r.type, "dash");
+  // 3 个清晰度，去重后应为 3 条而非 5 条
+  assert.equal(r.streams.length, 3);
+  // 每个清晰度保留带宽最高的一条：1080P 应为 AVC 的 3000 带宽
+  const q1080 = r.streams.find((s) => s.quality === 80);
+  assert.equal(q1080.videoUrl, "https://v/1080-avc.m4s");
+  const q720 = r.streams.find((s) => s.quality === 64);
+  assert.equal(q720.videoUrl, "https://v/720.m4s");
+});
+
 test("parsePlayUrl 接口报错时返回 ok=false", () => {
   const r = B.parsePlayUrl({ code: -412, message: "请求被拦截" }, "mp4");
   assert.equal(r.ok, false);
