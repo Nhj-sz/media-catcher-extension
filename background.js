@@ -693,11 +693,12 @@ function ensureBiliRefererRule() {
 
 async function handleBiliResolve(message, sendResponse) {
   const bvid = message.bvid;
-  const cid = message.cid;
-  if (!bvid || !cid) {
-    sendResponse({ ok: false, error: "缺少 bvid 或 cid" });
+  if (!bvid) {
+    sendResponse({ ok: false, error: "缺少 bvid" });
     return;
   }
+  // cid 可能为空（仅从 URL 拿到 bvid），由 resolveBilibili 内部 getView 补全
+  const cid = message.cid || 0;
   try {
     const cookie = await getBiliCookie();
     const result = await globalThis.MCD_BILI.resolveBilibili({ bvid, cid, cookie });
