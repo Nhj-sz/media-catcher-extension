@@ -27,7 +27,9 @@ const EXPOSE = [
   "isHttpUrl",
   "extensionFromMime",
   "getPreferredRecordMimeType",
-  "startRecordingFromItem"
+  "startRecordingFromItem",
+  "isMediaSegmentUrl",
+  "getDirectDownloadUrl"
 ];
 
 function setup(selectors = {}) {
@@ -189,9 +191,12 @@ test("buildFileName 按媒体类型给默认扩展名（避免音频被命名 .m
 
 function makeMediaRecorderMock() {
   const supported = new Set([
+    "audio/mp4",
+    "audio/mpeg",
     "audio/webm;codecs=opus",
     "audio/webm",
-    "audio/mp4",
+    "video/mp4;codecs=h264,aac",
+    "video/mp4",
     "video/webm;codecs=vp9,opus",
     "video/webm;codecs=vp8,opus",
     "video/webm;codecs=vp9",
@@ -238,10 +243,46 @@ function setupWithMediaRecorder() {
   return { api, dom };
 }
 
-test("getPreferredRecordMimeType 按音视频返回各自编码首选", () => {
+test("getPreferredRecordMimeType 优先 mp4（录制产物为 mp4/m4a/mp3）", () => {
   const { api } = setupWithMediaRecorder();
-  assert.equal(api.getPreferredRecordMimeType(true), "audio/webm;codecs=opus");
-  assert.equal(api.getPreferredRecordMimeType(false), "video/webm;codecs=vp9,opus");
+  assert.equal(api.getPreferredRecordMimeType(true), "audio/mp4");
+  assert.equal(api.getPreferredRecordMimeType(false), "video/mp4;codecs=h264,aac");
+});
+
+test("isMediaSegmentUrl 识别 MSE/HLS/DASH 分片地址", () => {
+  const { api } = setup();
+  assert.equal(api.isMediaSegmentUrl("https://x.com/a.m4s"), true);
+  assert.equal(api.isMediaSegmentUrl("https://x.com/v/seg-3.m4s?t=1"), true);
+  assert.equal(api.isMediaSegmentUrl("https://x.com/init.mp4"), true);
+  assert.equal(api.isMediaSegmentUrl("https://x.com/a.mp4?range=0-1000"), true);
+  assert.equal(api.isMediaSegmentUrl("https://x.com/dash/sq/123/seg-2"), true);
+  assert.equal(api.isMediaSegmentUrl("https://x.com/a.mp4"), false);
+  assert.equal(api.isMediaSegmentUrl("https://x.com/a.mp3"), false);
+  assert.equal(api.isMediaSegmentUrl("https://x.com/a.m3u8"), false);
+});
+
+test("getDirectDownloadUrl 跳过流媒体与分片，优先匹配直链", () => {
+  const { api } = setup();
+  // 分片不应作为直链
+  assert.equal(
+    api.getDirectDownloadUrl({ url: "https://x.com/a.m4s", downloadUrl: "https://x.com/v/seg-1.m4s" }),
+    ""
+  );
+  // 流媒体不应作为直链
+  assert.equal(
+    api.getDirectDownloadUrl({ url: "https://x.com/a.m3u8" }),
+    ""
+  );
+  // 完整文件优先 downloadUrl
+  assert.equal(
+    api.getDirectDownloadUrl({ url: "blob:https://x.com/x", downloadUrl: "https://x.com/full.mp4" }),
+    "https://x.com/full.mp4"
+  );
+  // 无直链返回空
+  assert.equal(
+    api.getDirectDownloadUrl({ url: "blob:https://x.com/x" }),
+    ""
+  );
 });
 
 test("startRecordingFromItem 拒绝非音视频条目且不创建录制会话", () => {

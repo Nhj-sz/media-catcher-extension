@@ -110,6 +110,44 @@ function extractExtensionFromUrl(url) {
   return matched ? matched[1].toLowerCase() : "";
 }
 
+function isStreamUrl(url) {
+  return /\.(m3u8|m3u|mpd)([?#]|$)/i.test(url || "") || /mpegurl|dash\+xml/i.test((url || ""));
+}
+
+// 判断 URL 是否为媒体分片/碎片（MSE / HLS / DASH 的一段），单独下载只会得到片段而非完整文件。
+function isMediaSegmentUrl(url) {
+  if (!url || typeof url !== "string") {
+    return false;
+  }
+
+  const u = url.toLowerCase();
+  if (/\.m4s([?#]|$)/i.test(u)) {
+    return true;
+  }
+  if (/[?&](range|bytestart|biteend|fragment|segment|mssegment|sq)=/i.test(u)) {
+    return true;
+  }
+  if (/(\/sq\/|\/init(\.|$)|init\.mp4|\/chunk|\/segment|\/fragment|seg[-_]\d+|bytestart|biteend)/i.test(u)) {
+    return true;
+  }
+  return false;
+}
+
+// 选出真正可下载的完整文件直链：优先网络匹配直链，跳过流媒体与分片。
+function pickDownloadUrl(item) {
+  const urls = [item.downloadUrl, item.url].filter((u) => /^https?:/i.test(u || ""));
+  for (const url of urls) {
+    if (isStreamUrl(url)) {
+      continue;
+    }
+    if (isMediaSegmentUrl(url)) {
+      continue;
+    }
+    return url;
+  }
+  return "";
+}
+
 function sanitizeName(name) {
   return (name || "媒体")
     .replace(/[\\/:*?"<>|]+/g, "_")
@@ -151,9 +189,15 @@ async function copyToClipboard(text) {
 }
 
 async function downloadItem(item) {
+  const url = pickDownloadUrl(item);
+  if (!url) {
+    setStatus("该条目无可下载的完整文件直链（可能为分片流媒体，请用页面内「录制下载」）。");
+    return;
+  }
+
   const response = await sendMessage({
     type: "DOWNLOAD_MEDIA",
-    url: item.url,
+    url,
     filename: buildFileName(item)
   });
 
@@ -235,14 +279,18 @@ function renderList() {
     downloadBtn.className = "btn primary";
     downloadBtn.textContent = "下载";
 
-    const isHttpUrl = /^https?:/i.test(item.url || "");
-    const isStream = /\.(m3u8|m3u|mpd)([?#]|$)/i.test(item.url || "") || /mpegurl|dash\+xml/i.test(item.mimeType || "");
+    const directUrl = pickDownloadUrl(item);
+    const isStream = isStreamUrl(item.url || "");
+    const isSegment = isMediaSegmentUrl(item.url || "") || isMediaSegmentUrl(item.downloadUrl || "");
     if (isStream) {
       downloadBtn.disabled = true;
       downloadBtn.title = "流媒体为分片列表，需借助专门合并工具下载。";
-    } else if (!isHttpUrl) {
+    } else if (isSegment) {
       downloadBtn.disabled = true;
-      downloadBtn.title = "blob/data 地址无法直接下载";
+      downloadBtn.title = "该地址为媒体分片（非完整文件），无法直链下载，请使用页面内「录制下载」。";
+    } else if (!directUrl) {
+      downloadBtn.disabled = true;
+      downloadBtn.title = "blob/data 地址或暂无可下载直链";
     }
 
     downloadBtn.addEventListener("click", () => {

@@ -239,6 +239,24 @@ function safeText(text, maxLength = 120) {
   return compact.length > maxLength ? `${compact.slice(0, maxLength)}...` : compact;
 }
 
+function isMediaSegmentUrl(url) {
+  if (!url || typeof url !== "string") {
+    return false;
+  }
+
+  const u = url.toLowerCase();
+  if (/\.m4s([?#]|$)/i.test(u)) {
+    return true;
+  }
+  if (/[?&](range|bytestart|biteend|fragment|segment|mssegment|sq)=/i.test(u)) {
+    return true;
+  }
+  if (/(\/sq\/|\/init(\.|$)|init\.mp4|\/chunk|\/segment|\/fragment|seg[-_]\d+|bytestart|biteend)/i.test(u)) {
+    return true;
+  }
+  return false;
+}
+
 function guessFilenameFromUrl(url) {
   if (!url) {
     return "media";
@@ -690,6 +708,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({
         ok: false,
         error: "仅支持直接下载 http/https 链接。"
+      });
+      return;
+    }
+
+    if (/\.(m3u8|m3u|mpd)([?#]|$)/i.test(url) || /mpegurl|dash\+xml/i.test(url)) {
+      sendResponse({
+        ok: false,
+        error: "该地址为流媒体分片列表，无法直链下载，请使用页面内「录制下载」或专门合并工具。"
+      });
+      return;
+    }
+
+    if (isMediaSegmentUrl(url)) {
+      sendResponse({
+        ok: false,
+        error: "该地址为媒体分片（非完整文件），无法直链下载，请使用页面内「录制下载」。"
       });
       return;
     }

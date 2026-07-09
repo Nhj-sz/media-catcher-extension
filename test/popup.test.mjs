@@ -9,7 +9,10 @@ const EXPOSE = [
   "extensionFromMime",
   "sanitizeName",
   "buildFileName",
-  "shortUrl"
+  "shortUrl",
+  "isMediaSegmentUrl",
+  "isStreamUrl",
+  "pickDownloadUrl"
 ];
 
 function setup() {
@@ -44,6 +47,29 @@ test("sanitizeName 限制长度并清理非法字符", () => {
   assert.equal(api.sanitizeName('a/b:c*?.mp4'), "a_b_c_.mp4");
   assert.equal(api.sanitizeName("x".repeat(200)).length, 80);
   assert.equal(api.sanitizeName(""), "媒体");
+});
+
+test("isMediaSegmentUrl / isStreamUrl 识别分片与流", () => {
+  const { api } = setup();
+  assert.equal(api.isMediaSegmentUrl("https://x.com/a.m4s"), true);
+  assert.equal(api.isMediaSegmentUrl("https://x.com/a.mp4?range=0-1"), true);
+  assert.equal(api.isMediaSegmentUrl("https://x.com/a.mp4"), false);
+  assert.equal(api.isStreamUrl("https://x.com/a.m3u8"), true);
+  assert.equal(api.isStreamUrl("https://x.com/a.mp4"), false);
+});
+
+test("pickDownloadUrl 跳过流媒体与分片，优先匹配直链", () => {
+  const { api } = setup();
+  assert.equal(
+    api.pickDownloadUrl({ url: "https://x.com/a.m4s", downloadUrl: "https://x.com/v/seg-1.m4s" }),
+    ""
+  );
+  assert.equal(api.pickDownloadUrl({ url: "https://x.com/a.m3u8" }), "");
+  assert.equal(
+    api.pickDownloadUrl({ url: "blob:https://x.com/x", downloadUrl: "https://x.com/full.mp4" }),
+    "https://x.com/full.mp4"
+  );
+  assert.equal(api.pickDownloadUrl({ url: "blob:https://x.com/x" }), "");
 });
 
 test("buildFileName 组合标签与扩展名", () => {

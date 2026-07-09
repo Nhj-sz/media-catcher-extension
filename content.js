@@ -1764,12 +1764,15 @@ function getDirectDownloadUrl(item) {
     return "";
   }
 
-  if (isHttpUrl(item.url)) {
-    return item.url;
-  }
-
-  if (isHttpUrl(item.downloadUrl)) {
-    return item.downloadUrl;
+  const candidates = [item.downloadUrl, item.url].filter((u) => isHttpUrl(u));
+  for (const url of candidates) {
+    if (isStreamItem({ url, downloadUrl: url })) {
+      continue;
+    }
+    if (isMediaSegmentUrl(url)) {
+      continue;
+    }
+    return url;
   }
 
   return "";
@@ -1833,13 +1836,16 @@ function getPreferredRecordMimeType(isAudio = false) {
 
   const preferred = isAudio
     ? [
+        "audio/mp4",
+        "audio/mpeg",
         "audio/webm;codecs=opus",
         "audio/webm",
-        "audio/mp4",
         "audio/ogg;codecs=opus",
         "audio/ogg"
       ]
     : [
+        "video/mp4;codecs=h264,aac",
+        "video/mp4",
         "video/webm;codecs=vp9,opus",
         "video/webm;codecs=vp8,opus",
         "video/webm;codecs=vp9",
@@ -2090,6 +2096,11 @@ function attachDownloadCandidates(items) {
     }
 
     if (detectItemType(item) !== "video") {
+      return false;
+    }
+
+    // 分片/碎片地址（MSE/HLS/DASH 的一段）不是完整文件，不能作为下载直链
+    if (isMediaSegmentUrl(item.url)) {
       return false;
     }
 
@@ -2361,6 +2372,35 @@ function isStreamItem(item) {
   return false;
 }
 
+// 判断 URL 是否为媒体分片/碎片（MSE / HLS / DASH 的一段），这类地址单独下载只会得到几百字节的片段，不是完整文件。
+function isMediaSegmentUrl(url) {
+  if (!url || typeof url !== "string") {
+    return false;
+  }
+
+  const u = url.toLowerCase();
+
+  if (/\.m4s([?#]|$)/i.test(u)) {
+    return true;
+  }
+
+  if (
+    /[?&](range|bytestart|biteend|fragment|segment|mssegment|sq)=/i.test(u)
+  ) {
+    return true;
+  }
+
+  if (
+    /(\/sq\/|\/init(\.|$)|init\.mp4|\/chunk|\/segment|\/fragment|seg[-_]\d+|bytestart|biteend)/i.test(
+      u
+    )
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 function getFilteredPanelItems() {
   const q = state.panelQuery;
 
@@ -2595,12 +2635,14 @@ function renderPanelList() {
     const urlNode = document.createElement("p");
     urlNode.className = "mcd-item-url";
     const directUrl = getDirectDownloadUrl(item);
-    if (item.url && isHttpUrl(item.url)) {
+    if (item.url && isHttpUrl(item.url) && !isMediaSegmentUrl(item.url) && !isStreamItem(item)) {
       urlNode.textContent = shortUrl(item.url);
     } else if (directUrl) {
       urlNode.textContent = `页面源非直链，已匹配下载链接：${shortUrl(directUrl)}`;
+    } else if (item.downloadUrl && (isStreamItem(item) || isMediaSegmentUrl(item.downloadUrl))) {
+      urlNode.textContent = "该视频为分片流媒体，没有可直接下载的完整文件，请使用「录制下载」。";
     } else {
-      urlNode.textContent = "暂未获得可下载直链（可继续播放 2-5 秒后点刷新）。";
+      urlNode.textContent = "暂未获得可下载直链（可继续播放 2-5 秒后点刷新，或使用「录制下载」）。";
     }
 
     const meta = document.createElement("p");
@@ -2667,6 +2709,9 @@ function renderPanelList() {
     if (isStreamItem(item)) {
       downloadBtn.disabled = true;
       downloadBtn.title = "流媒体为分片列表，需借助专门合并工具（如 yt-dlp / ffmpeg）下载。可点“复制”拿到地址。";
+    } else if (isMediaSegmentUrl(item.url) || isMediaSegmentUrl(item.downloadUrl)) {
+      downloadBtn.disabled = true;
+      downloadBtn.title = "该地址为媒体分片（非完整文件），无法直链下载，请使用「录制下载」。";
     } else if (!directUrl) {
       downloadBtn.disabled = true;
       downloadBtn.title = "当前条目尚未捕获到可下载的 http/https 直链。";
