@@ -218,7 +218,8 @@
       headers["Cookie"] = cookie;
     }
     const res = await fetch("https://api.bilibili.com/x/web-interface/nav", {
-      headers
+      headers,
+      credentials: "include"
     });
     if (!res.ok) {
       throw new Error("获取 WBI 密钥失败：HTTP " + res.status);
@@ -288,20 +289,20 @@
       return { ok: true, type: "mp4", streams };
     }
 
-    // 退回：DASH（视频 / 音频分开）
+    // 退回：DASH（视频 / 音频分开），返回所有可用视频清晰度
     if (data.dash && (Array.isArray(data.dash.video) || Array.isArray(data.dash.audio))) {
       const videos = Array.isArray(data.dash.video) ? data.dash.video : [];
       const audios = Array.isArray(data.dash.audio) ? data.dash.audio : [];
       if (!videos.length) {
         return { ok: false, error: "DASH 流缺少视频轨道", streams: [] };
       }
-      // 选带宽最高的视频，选带宽最高的音频
-      const video = videos.slice().sort((a, b) => (b.bandwidth || 0) - (a.bandwidth || 0))[0];
+      // 选带宽最高的音频作为通用音频轨（B站 DASH 音频通常不随视频清晰度变化）
       const audio = audios.length
         ? audios.slice().sort((a, b) => (b.bandwidth || 0) - (a.bandwidth || 0))[0]
         : null;
-      const streams = [
-        {
+      const duration = data.dash.duration || 0;
+      const streams = videos.map((video) => {
+        return {
           kind: "dash",
           strategy: strategyName,
           quality: video.id || 0,
@@ -312,9 +313,12 @@
           audioBackupUrls: audio && Array.isArray(audio.backupUrl) ? audio.backupUrl : [],
           width: video.width || 0,
           height: video.height || 0,
-          size: (video.bandwidth || 0) * ((data.dash.duration || 0) / 8) || 0
-        }
-      ];
+          bandwidth: video.bandwidth || 0,
+          size: (video.bandwidth || 0) * (duration / 8) || 0
+        };
+      });
+      // 按清晰度从高到低排序，方便用户选择
+      streams.sort((a, b) => (b.quality || 0) - (a.quality || 0));
       return { ok: true, type: "dash", streams };
     }
 
@@ -327,7 +331,7 @@
       {
         bvid,
         cid,
-        qn: 80,
+        qn: 127,
         fnval: fnval || 16,
         fnver: 0,
         fourk: 1,
@@ -345,7 +349,7 @@
     if (cookie) {
       headers["Cookie"] = cookie;
     }
-    const res = await fetch(url, { headers });
+    const res = await fetch(url, { headers, credentials: "include" });
     if (!res.ok) {
       throw new Error("取流请求失败：HTTP " + res.status);
     }
@@ -362,8 +366,10 @@
     if (cookie) {
       headers["Cookie"] = cookie;
     }
-    const url = "https://api.bilibili.com/x/web-interface/view?bvid=" + encodeURIComponent(bvid);
-    const res = await fetch(url, { headers });
+    const res = await fetch("https://api.bilibili.com/x/web-interface/view?bvid=" + encodeURIComponent(bvid), {
+      headers,
+      credentials: "include"
+    });
     if (!res.ok) {
       throw new Error("获取视频信息失败：HTTP " + res.status);
     }
@@ -398,9 +404,9 @@
     }
 
     const strategies = [
-      { name: "html5-mp4", fnval: 1, extra: { platform: "html5", high_quality: 1 } },
-      { name: "mp4-look", fnval: 1, extra: { try_look: 1 } },
-      { name: "dash", fnval: 16, extra: { fourk: 1 } }
+      { name: "dash", fnval: 16, extra: { qn: 127, fourk: 1 } },
+      { name: "html5-mp4", fnval: 1, extra: { platform: "html5", high_quality: 1, qn: 80 } },
+      { name: "mp4-look", fnval: 1, extra: { try_look: 1, qn: 80 } }
     ];
 
     let lastError = "";
@@ -430,6 +436,49 @@
     };
   }
 
+  // 为指定清晰度单独请求 MP4 合流（DASH 条目点击下载时优先尝试单文件）
+  async function resolveMp4ForQuality({ bvid, cid, quality, cookie }) {
+    if (!cid) {
+      try {
+        const view = await getView(bvid, cookie);
+        cid = view.cid;
+      } catch (e) {
+        return { ok: false, error: "无法获取视频 cid", stream: null };
+      }
+    }
+    if (!cid) {
+      return { ok: false, error: "无法获取视频 cid", stream: null };
+    }
+
+    const qn = Number(quality) || 80;
+    const strategies = [
+      { name: "html5-mp4", fnval: 1, extra: { platform: "html5", high_quality: 1, qn } },
+      { name: "mp4-look", fnval: 1, extra: { try_look: 1, qn } }
+    ];
+
+    let lastError = "";
+    for (const st of strategies) {
+      try {
+        const result = await tryPlayUrl({
+          bvid,
+          cid,
+          cookie,
+          fnval: st.fnval,
+          extra: st.extra,
+          strategyName: st.name
+        });
+        if (result.ok && result.streams.length && result.streams[0].kind === "mp4") {
+          return { ok: true, stream: result.streams[0] };
+        }
+        lastError = result.error || lastError;
+      } catch (e) {
+        lastError = e && e.message ? e.message : String(e);
+      }
+    }
+
+    return { ok: false, error: lastError || "该清晰度没有 MP4 合流", stream: null };
+  }
+
   const API = {
     md5,
     getMixinKey,
@@ -438,6 +487,7 @@
     getView,
     parsePlayUrl,
     resolveBilibili,
+    resolveMp4ForQuality,
     qnLabel
   };
 

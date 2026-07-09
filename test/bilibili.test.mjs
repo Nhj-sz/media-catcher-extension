@@ -66,21 +66,16 @@ test("parsePlayUrl 解析 muxed MP4（durl）", () => {
   assert.equal(s.qualityLabel, "1080P");
 });
 
-test("parsePlayUrl 解析 DASH（视频 + 音频分开）", () => {
+test("parsePlayUrl 解析 DASH 返回所有可用视频清晰度", () => {
   const json = {
     code: 0,
     data: {
       dash: {
         duration: 100,
         video: [
-          {
-            id: 80,
-            baseUrl: "https://v/2.m4s",
-            backupUrl: ["https://v2/2.m4s"],
-            bandwidth: 3000,
-            width: 1920,
-            height: 1080
-          }
+          { id: 64, baseUrl: "https://v/720.m4s", backupUrl: [], bandwidth: 1500, width: 1280, height: 720 },
+          { id: 80, baseUrl: "https://v/1080.m4s", backupUrl: [], bandwidth: 3000, width: 1920, height: 1080 },
+          { id: 32, baseUrl: "https://v/480.m4s", backupUrl: [], bandwidth: 800, width: 852, height: 480 }
         ],
         audio: [{ id: 30280, baseUrl: "https://a/3.m4s", backupUrl: [], bandwidth: 200 }]
       }
@@ -89,12 +84,14 @@ test("parsePlayUrl 解析 DASH（视频 + 音频分开）", () => {
   const r = B.parsePlayUrl(json, "dash");
   assert.equal(r.ok, true);
   assert.equal(r.type, "dash");
-  const s = r.streams[0];
-  assert.equal(s.kind, "dash");
-  assert.equal(s.videoUrl, "https://v/2.m4s");
-  assert.equal(s.audioUrl, "https://a/3.m4s");
-  assert.equal(s.width, 1920);
-  assert.equal(s.height, 1080);
+  assert.equal(r.streams.length, 3);
+  // 按清晰度从高到低排序
+  assert.equal(r.streams[0].quality, 80);
+  assert.equal(r.streams[0].qualityLabel, "1080P");
+  assert.equal(r.streams[0].videoUrl, "https://v/1080.m4s");
+  assert.equal(r.streams[0].audioUrl, "https://a/3.m4s");
+  assert.equal(r.streams[1].quality, 64);
+  assert.equal(r.streams[2].quality, 32);
 });
 
 test("parsePlayUrl 接口报错时返回 ok=false", () => {

@@ -119,6 +119,7 @@ function renderBiliStreams(streams, titleBase) {
     elements.biliStreams.appendChild(p);
     return;
   }
+  const pageInfo = state.biliInfo || {};
   for (const stream of streams) {
     const row = document.createElement("div");
     row.className = "bili-row";
@@ -135,7 +136,7 @@ function renderBiliStreams(streams, titleBase) {
     const dl = document.createElement("button");
     dl.type = "button";
     dl.className = "btn soft";
-    dl.textContent = stream.kind === "dash" ? "下载(视频+音频)" : "下载 MP4";
+    dl.textContent = stream.kind === "dash" ? "尝试下载 MP4" : "下载 MP4";
     dl.addEventListener("click", async () => {
       dl.disabled = true;
       dl.textContent = "下载中…";
@@ -143,10 +144,11 @@ function renderBiliStreams(streams, titleBase) {
       const resp = await sendMessage({
         type: "BILI_DOWNLOAD",
         stream,
-        filenameBase: titleBase
+        filenameBase: titleBase,
+        pageInfo
       });
       dl.disabled = false;
-      dl.textContent = stream.kind === "dash" ? "下载(视频+音频)" : "下载 MP4";
+      dl.textContent = stream.kind === "dash" ? "尝试下载 MP4" : "下载 MP4";
       if (!resp || !resp.ok) {
         setStatus("B 站下载失败：" + ((resp && resp.error) || "未知错误"));
         return;
@@ -154,7 +156,7 @@ function renderBiliStreams(streams, titleBase) {
       if (resp.kind === "dash" && resp.note) {
         setStatus("已开始下载视频与音频两个文件。" + resp.note);
       } else {
-        setStatus("已开始下载 B 站视频（MP4）。");
+        setStatus("已开始下载 B 站视频（MP4）。" + (resp.note || ""));
       }
     });
 

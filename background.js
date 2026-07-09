@@ -734,8 +734,9 @@ function doDownload(url, filename, backupUrls, onDone) {
   attempt();
 }
 
-function handleBiliDownload(message, sendResponse) {
+async function handleBiliDownload(message, sendResponse) {
   const stream = message.stream;
+  const pageInfo = message.pageInfo || {};
   if (!stream) {
     sendResponse({ ok: false, error: "缺少下载流信息" });
     return;
@@ -746,6 +747,37 @@ function handleBiliDownload(message, sendResponse) {
     .replace(/[\\/:*?"<>|]/g, "_")
     .slice(0, 120);
   const q = stream.qualityLabel || "";
+
+  // DASH 流优先尝试拿同清晰度的 MP4 合流（单文件对用户更友好）
+  if (stream.kind === "dash") {
+    const bvid = pageInfo.bvid;
+    const cid = pageInfo.cid || 0;
+    const quality = stream.quality || 0;
+    if (bvid && quality) {
+      try {
+        const cookie = await getBiliCookie();
+        const mp4 = await globalThis.MCD_BILI.resolveMp4ForQuality({
+          bvid,
+          cid,
+          quality,
+          cookie
+        });
+        if (mp4.ok && mp4.stream) {
+          const filename = `${base}${q ? "-" + q : ""}.mp4`;
+          doDownload(mp4.stream.url, filename, mp4.stream.backupUrls, (err, downloadId) => {
+            if (err) {
+              sendResponse({ ok: false, error: err.message });
+              return;
+            }
+            sendResponse({ ok: true, downloadId, kind: "mp4", note: "已自动转为 MP4 合流下载" });
+          });
+          return;
+        }
+      } catch (e) {
+        // 拿不到 MP4 合流则回退到 DASH 双文件下载
+      }
+    }
+  }
 
   if (stream.kind === "mp4") {
     const filename = `${base}${q ? "-" + q : ""}${stream.filenameSuffix || ""}.mp4`;

@@ -1662,7 +1662,7 @@ function renderBiliBox() {
     }
     setStatus("B 站解析成功，共 " + resp.streams.length + " 个可下载项。");
     for (const stream of resp.streams) {
-      list.appendChild(buildBiliStreamRow(stream, info.title));
+      list.appendChild(buildBiliStreamRow(stream, info.title, info));
     }
   });
 
@@ -1672,7 +1672,7 @@ function renderBiliBox() {
   box.appendChild(card);
 }
 
-function buildBiliStreamRow(stream, titleBase) {
+function buildBiliStreamRow(stream, titleBase, pageInfo) {
   const row = document.createElement("div");
   row.className = "mcd-bili-row";
 
@@ -1690,7 +1690,7 @@ function buildBiliStreamRow(stream, titleBase) {
   const dl = document.createElement("button");
   dl.type = "button";
   dl.className = "mcd-btn mcd-soft mcd-mini";
-  dl.textContent = stream.kind === "dash" ? "下载(视频+音频)" : "下载 MP4";
+  dl.textContent = stream.kind === "dash" ? "尝试下载 MP4" : "下载 MP4";
   dl.addEventListener("click", async () => {
     dl.disabled = true;
     dl.textContent = "下载中…";
@@ -1698,7 +1698,8 @@ function buildBiliStreamRow(stream, titleBase) {
     const resp = await runtimeSendMessage({
       type: "BILI_DOWNLOAD",
       stream,
-      filenameBase: titleBase
+      filenameBase: titleBase,
+      pageInfo
     });
     dl.disabled = false;
     dl.textContent = stream.kind === "dash" ? "下载(视频+音频)" : "下载 MP4";
